@@ -5,9 +5,9 @@ import { InvitationQr } from '../../components/InvitationQr'
 import { getCurrentLocalAccount, logoutLocalAccount, type LocalAccount } from '../../lib/localInvitations'
 
 const statusCopy = {
-  pending: { label: 'AINDA NÃO ATIVADO', title: 'AGUARDANDO LIBERAÇÃO', body: 'Seu cadastro foi recebido. Combine o pagamento diretamente com a organização. Assim que ele for confirmado manualmente, seu convite ficará ativo.', tone: 'pending' },
-  active: { label: 'CONVITE FUNCIONANDO', title: 'SEU ACESSO ESTÁ LIBERADO', body: 'Apresente este QR Code na entrada. Ele é pessoal e funciona uma única vez.', tone: 'active' },
-  used: { label: 'CONVITE JÁ UTILIZADO', title: 'ENTRADA REGISTRADA', body: 'Este convite já passou pela portaria e não pode ser usado novamente.', tone: 'used' },
+  pending: { label: 'INGRESSO PENDENTE', title: 'FALTA 1 PASSO', body: 'Sua conta já está pronta. Compre pelo WhatsApp e aguarde a organização ativar seu ingresso.', tone: 'pending' },
+  active: { label: 'CONVITE FUNCIONANDO', title: 'INGRESSO ATIVO', body: 'Apresente este QR Code na entrada. Ele é pessoal e funciona uma única vez.', tone: 'active' },
+  used: { label: 'CONVITE JÁ UTILIZADO', title: 'INGRESSO JÁ UTILIZADO', body: 'Este convite já passou pela portaria e não pode ser usado novamente.', tone: 'used' },
 } as const
 
 export default function MyAccountPage() {
@@ -45,7 +45,7 @@ export default function MyAccountPage() {
   return <main className={`account-portal status-${status.tone}`}>
     <header className="account-portal-head"><Link to="/">H<span>26</span></Link><div><span>{account.fullName}</span><button type="button" onClick={logout}>Sair</button></div></header>
     <section className="invitation-status" aria-labelledby="status-title">
-      <div className="status-copy"><p><i aria-hidden="true" />{status.label}</p><h1 id="status-title">{status.title}</h1><div className="status-explanation">{status.body}</div><div className="ticket-whatsapp"><span>{isPending ? 'Ainda não comprou? Combine diretamente com a organização.' : 'Ficou com alguma dúvida sobre seu ingresso? Clique abaixo e fale com a organização.'}</span><a className="whatsapp-buy" href={`${eventConfig.whatsappUrl}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noreferrer"><span>{isPending ? 'Comprar pelo WhatsApp' : 'Tirar dúvida pelo WhatsApp'}</span><b aria-hidden="true">↗</b></a></div><dl><div><dt>Data</dt><dd>24.10.2026 · {eventConfig.time}</dd></div><div><dt>Local</dt><dd>{eventConfig.location} · {eventConfig.city}</dd></div><div><dt>Formato</dt><dd>Open bar</dd></div></dl></div>
+      <div className="status-copy"><p><i aria-hidden="true" />{status.label}</p><h1 id="status-title">{status.title}</h1><div className="status-explanation">{status.body}</div>{isPending && <ol className="ticket-steps"><li className="done"><span>1</span><div><strong>Conta criada</strong><small>Seu cadastro está concluído.</small></div><b aria-label="Concluído">✓</b></li><li className="current"><span>2</span><div><strong>Compre pelo WhatsApp</strong><small>Combine o pagamento com a organização.</small></div></li><li><span>3</span><div><strong>Aguarde a ativação</strong><small>Depois da confirmação, seu QR Code será liberado.</small></div></li></ol>}<div className="ticket-whatsapp"><span>{isPending ? 'Clique abaixo para comprar seu ingresso.' : 'Precisa de ajuda? Fale com a organização.'}</span><a className="whatsapp-buy" href={`${eventConfig.whatsappUrl}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noreferrer"><span>{isPending ? 'Comprar pelo WhatsApp' : 'Falar pelo WhatsApp'}</span><b aria-hidden="true">↗</b></a></div><dl><div><dt>Data</dt><dd>24.10.2026 · {eventConfig.time}</dd></div><div><dt>Local</dt><dd>{eventConfig.location} · {eventConfig.city}</dd></div><div><dt>Formato</dt><dd>Open bar</dd></div></dl></div>
       <article className="invitation-card">
         <div className="invitation-card-top"><span>CONVITE PESSOAL</span><strong>{account.invitationStatus === 'active' ? 'ATIVO' : account.invitationStatus === 'used' ? 'UTILIZADO' : 'PENDENTE'}</strong></div>
         <div className="invitation-qr">{account.invitationStatus === 'active' && <InvitationQr key={account.invitationCode} code={account.invitationCode} />}{account.invitationStatus === 'pending' && <span>AGUARDANDO<br />ATIVAÇÃO</span>}</div>

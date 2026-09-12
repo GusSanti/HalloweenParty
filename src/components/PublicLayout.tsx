@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { getCurrentLocalAccount } from '../lib/localInvitations'
 import { Assistant } from './Assistant'
 
 export function PublicLayout() {
@@ -8,6 +9,7 @@ export function PublicLayout() {
   const navigate = useNavigate()
   const isHome = location.pathname === '/'
   const isTicketPortal = location.pathname === '/meu-ingresso'
+  const hasAccount = Boolean(getCurrentLocalAccount())
   function jumpTo(id: string) {
     setMenuOpen(false)
     const scroll = () => document.getElementById(id)?.scrollIntoView({ behavior: 'auto', block: 'start' })
@@ -23,7 +25,7 @@ export function PublicLayout() {
           <button type="button" onClick={() => jumpTo('evento')}>O evento</button>
           <button type="button" onClick={() => jumpTo('open-bar')}>Open bar</button>
         </nav>
-        <Link className="header-cta" to="/ingresso">Comprar ingresso</Link>
+        <Link className="header-cta" to={hasAccount ? '/meu-ingresso' : '/ingresso'}>{hasAccount ? 'Meu ingresso' : 'Comprar ingresso'}</Link>
         <button className="menu-toggle" type="button" aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
           {menuOpen ? 'Fechar' : 'Menu'}
         </button>

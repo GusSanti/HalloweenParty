@@ -323,9 +323,12 @@ footer nav a { text-decoration: none; }
 .ticket-whatsapp .whatsapp-buy { margin-top: 11px; }
 .account-access-intro > strong { width: max-content; padding: 12px 17px; color: var(--black); background: var(--accent); font-size: .78rem; letter-spacing: .14em; }
 .account-form-wrap { width: min(620px, 100%); margin: auto; padding: clamp(35px, 6vw, 82px); }
-.account-tabs { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 52px; border-bottom: 1px solid rgba(10,9,8,.25); }
-.account-tabs button { padding: 16px 8px; border: 0; color: #716c65; background: transparent; text-transform: uppercase; }
-.account-tabs button.active { color: var(--black); border-bottom: 3px solid var(--accent); font-weight: 700; }
+.account-choice h2 { margin: 22px 0; font: 900 clamp(4rem, 7vw, 7rem)/.78 var(--display); letter-spacing: -.035em; }
+.account-choice > p:not(.eyebrow) { margin: 0 0 30px; color: #625d57; font-size: 1rem; }
+.account-choice > div { display: grid; gap: 12px; }
+.account-choice button { min-height: 62px; padding: 17px 20px; border: 2px solid var(--black); color: var(--paper); background: var(--black); font-size: 1rem; font-weight: 800; text-align: left; text-transform: uppercase; }
+.account-choice button:last-child { color: var(--black); background: var(--accent); border-color: var(--accent); }
+.account-mode-back { margin-bottom: 38px; padding: 0 0 8px; border: 0; border-bottom: 1px solid rgba(10,9,8,.35); color: #625d57; background: transparent; font-size: .78rem; text-transform: uppercase; }
 .account-form h2 { margin: 18px 0 30px; font: 900 clamp(4rem, 6vw, 6rem)/.78 var(--display); }
 .account-form label { display: grid; gap: 7px; margin-top: 17px; color: #625d57; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
 .account-form input { width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid rgba(10,9,8,.35); border-radius: 0; color: var(--black); background: transparent; font-size: 1rem; }
@@ -342,6 +345,11 @@ footer nav a { text-decoration: none; }
 .status-active .status-copy > p { color: #48c983; }.status-used .status-copy > p { color: #c19545; }
 .status-copy h1 { max-width: 850px; margin: 28px 0; font: 900 clamp(4.6rem, 9vw, 9rem)/.74 var(--display); letter-spacing: -.04em; }
 .status-explanation { max-width: 610px; color: #b0a89f; font-size: 1.08rem; line-height: 1.6; }
+.ticket-steps { max-width: 610px; margin: 30px 0 0; padding: 0; border-top: 1px solid var(--rule); list-style: none; }
+.ticket-steps li { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--rule); }
+.ticket-steps li > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #6c655d; border-radius: 50%; color: #b0a89f; font-size: .78rem; }
+.ticket-steps li strong, .ticket-steps li small { display: block; }.ticket-steps li strong { text-transform: uppercase; }.ticket-steps li small { margin-top: 4px; color: #8f8880; line-height: 1.4; }
+.ticket-steps li.done > span { border-color: #48c983; color: #48c983; }.ticket-steps li.done > b { color: #48c983; }.ticket-steps li.current > span { color: var(--black); background: var(--accent); border-color: var(--accent); }
 .status-copy dl { max-width: 680px; margin: 44px 0 0; border-top: 1px solid var(--rule); }
 .status-copy dl div { display: grid; grid-template-columns: 90px 1fr; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
 .status-copy dt { color: var(--gray); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; }.status-copy dd { margin: 0; }

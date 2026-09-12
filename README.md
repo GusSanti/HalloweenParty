@@ -14,6 +14,14 @@ Para banco novo: execute SUPABASE_SETUP.sql e depois essa migração.
 Não execute novamente o setup antigo depois da migração, pois ele sobrescreve
 as funções protegidas pela versão antiga.
 
+1. Antes do login, os botões do site mostram **Comprar ingresso**.
+2. Ao clicar, a pessoa responde **Você já tem uma conta?** e escolhe entre **Sim, entrar** e **Não, criar conta**.
+3. Depois do login, todos os botões de compra passam a mostrar **Meu ingresso** e abrem diretamente o convite.
+4. O cadastro solicita nome completo, WhatsApp, e-mail e senha. Não solicita data de nascimento.
+5. O ingresso começa como **Pendente** e mostra três passos: conta criada, compra pelo WhatsApp e espera pela ativação.
+6. Depois da ativação manual no painel, o QR aparece como **Ingresso ativo** e o botão do WhatsApp permanece disponível para ajuda.
+7. Depois da baixa, o estado muda para **Convite já utilizado**.
+
 Em Authentication, configure confirmação de e-mail, senha mínima de 12 caracteres,
 Site URL e Redirect URLs (incluindo /meu-ingresso no domínio local e publicado).
 O arquivo supabase/config.toml configura somente o ambiente da CLI local;
