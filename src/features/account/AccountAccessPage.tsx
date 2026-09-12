@@ -5,13 +5,15 @@ import { createLocalAccount, loginLocalAccount } from '../../lib/localInvitation
 
 export default function AccountAccessPage() {
   const [searchParams] = useSearchParams()
-  const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('modo') === 'cadastro' ? 'signup' : 'login')
+  const [mode, setMode] = useState<'choice' | 'login' | 'signup'>(searchParams.get('modo') === 'cadastro' ? 'signup' : 'choice')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(''); setLoading(true)
+    event.preventDefault()
+    if (mode === 'choice') return
+    setError(''); setLoading(true)
     const form = new FormData(event.currentTarget)
     try {
       if (mode === 'signup') {
@@ -39,11 +41,14 @@ export default function AccountAccessPage() {
       <strong>OPEN BAR</strong>
     </section>
     <section className="account-form-wrap">
-      <div className="account-tabs" role="tablist" aria-label="Acesso à conta">
-        <button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => { setMode('login'); setError('') }}>Entrar</button>
-        <button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => { setMode('signup'); setError('') }}>Criar conta</button>
-      </div>
-      <form className="account-form" onSubmit={submit}>
+      {mode === 'choice' ? <div className="account-choice">
+        <p className="eyebrow">Primeiro passo</p>
+        <h2>VOCÊ JÁ TEM<br />UMA CONTA?</h2>
+        <p>Escolha uma opção para continuar.</p>
+        <div><button type="button" onClick={() => setMode('login')}>Sim, entrar</button><button type="button" onClick={() => setMode('signup')}>Não, criar conta</button></div>
+      </div> : <>
+        <button className="account-mode-back" type="button" onClick={() => { setMode('choice'); setError('') }}>← Escolher outra opção</button>
+        <form className="account-form" onSubmit={submit}>
         <p className="eyebrow">{mode === 'signup' ? 'Novo cadastro' : 'Minha conta'}</p>
         <h2>{mode === 'signup' ? 'CRIAR CONTA' : 'ENTRAR'}</h2>
         {mode === 'signup' && <>
@@ -56,7 +61,8 @@ export default function AccountAccessPage() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="account-submit" type="submit" disabled={loading}>{loading ? 'Aguarde...' : mode === 'signup' ? 'Criar minha conta' : 'Entrar na minha conta'}</button>
         {mode === 'signup' && <small>Ao criar a conta, seu convite fica pendente até a confirmação manual da organização.</small>}
-      </form>
+        </form>
+      </>}
     </section>
   </main>
 }

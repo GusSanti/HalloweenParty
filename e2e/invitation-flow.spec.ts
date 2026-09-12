@@ -3,14 +3,17 @@ import { expect, test } from '@playwright/test'
 test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) => {
   await page.goto('/ingresso')
   await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Criar conta' }).click()
+  await expect(page.getByRole('heading', { name: 'VOCÊ JÁ TEM UMA CONTA?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Não, criar conta' }).click()
   await page.getByLabel('Nome completo').fill('Maria Teste')
   await page.getByLabel('WhatsApp').fill('37999999999')
   await page.getByLabel('E-mail').fill('maria@example.com')
   await page.getByLabel('Senha', { exact: true }).fill('senha-segura-123')
   await page.getByLabel('Confirmar senha').fill('senha-segura-123')
   await page.getByRole('button', { name: 'Criar minha conta' }).click()
-  await expect(page.getByRole('heading', { name: 'AGUARDANDO LIBERAÇÃO' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'FALTA 1 PASSO' })).toBeVisible()
+  await expect(page.getByText('Conta criada')).toBeVisible()
+  await expect(page.getByText('Aguarde a ativação')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toBeVisible()
   await expect(page.locator('.site-header')).toHaveCount(0)
 
@@ -24,11 +27,17 @@ test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) =
   await page.getByRole('button', { name: 'Ativar ingresso' }).click()
 
   await page.goto('/ingresso')
-  await expect(page.getByRole('heading', { name: 'SEU ACESSO ESTÁ LIBERADO' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'INGRESSO ATIVO' })).toBeVisible()
   await expect(page.getByAltText(/QR Code do convite/)).toBeVisible()
-  await expect(page.getByText('Ficou com alguma dúvida sobre seu ingresso?')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Tirar dúvida pelo WhatsApp' })).toBeVisible()
+  await expect(page.getByText('Precisa de ajuda?')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Falar pelo WhatsApp' })).toBeVisible()
   await expect(page.locator('.site-header')).toHaveCount(0)
+
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Comprar ingresso', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Meu ingresso', exact: true }).nth(1)).toBeVisible()
+  await page.getByRole('link', { name: 'Meu ingresso', exact: true }).nth(1).click()
+  await expect(page.getByRole('heading', { name: 'INGRESSO ATIVO' })).toBeVisible()
 })
 
 test('menu do evento mantém as ações funcionando sem hash', async ({ page }) => {

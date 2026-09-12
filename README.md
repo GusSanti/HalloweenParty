@@ -4,12 +4,12 @@ Site local do Halloween Party Open Bar em Abaeté. O site não processa pagament
 
 ## Fluxo do convidado
 
-1. O convidado clica em **Comprar ingresso**.
-2. Se já estiver logado, vai diretamente para **Meu ingresso**.
-3. Sem sessão, escolhe entre **Entrar** e **Criar conta**.
+1. Antes do login, os botões do site mostram **Comprar ingresso**.
+2. Ao clicar, a pessoa responde **Você já tem uma conta?** e escolhe entre **Sim, entrar** e **Não, criar conta**.
+3. Depois do login, todos os botões de compra passam a mostrar **Meu ingresso** e abrem diretamente o convite.
 4. O cadastro solicita nome completo, WhatsApp, e-mail e senha. Não solicita data de nascimento.
-5. O ingresso começa como **Ainda não ativado** e exibe um botão grande para comprar pelo WhatsApp.
-6. Depois da ativação manual no painel, o QR aparece como **Convite funcionando** e o botão do WhatsApp permanece disponível para dúvidas.
+5. O ingresso começa como **Pendente** e mostra três passos: conta criada, compra pelo WhatsApp e espera pela ativação.
+6. Depois da ativação manual no painel, o QR aparece como **Ingresso ativo** e o botão do WhatsApp permanece disponível para ajuda.
 7. Depois da baixa, o estado muda para **Convite já utilizado**.
 
 ## Painel administrativo

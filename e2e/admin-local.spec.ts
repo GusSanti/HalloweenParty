@@ -8,7 +8,7 @@ test('painel administrativo exige login local', async ({ page }) => {
 
 test('leitor de QR abre o mesmo cadastro do ingresso', async ({ page }) => {
   await page.goto('/ingresso')
-  await page.getByRole('button', { name: 'Criar conta' }).click()
+  await page.getByRole('button', { name: 'Não, criar conta' }).click()
   await page.getByLabel('Nome completo').fill('Pessoa do QR')
   await page.getByLabel('WhatsApp').fill('37999999999')
   await page.getByLabel('E-mail').fill('qr@example.com')

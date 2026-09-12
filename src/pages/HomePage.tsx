@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom'
 import { eventConfig } from '../config/event'
 import { Gallery } from '../features/gallery/Gallery'
+import { getCurrentLocalAccount } from '../lib/localInvitations'
 
 export function HomePage() {
+  const hasAccount = Boolean(getCurrentLocalAccount())
+  const ticketTarget = hasAccount ? '/meu-ingresso' : '/ingresso'
+  const ticketLabel = hasAccount ? 'Meu ingresso' : 'Comprar ingresso'
   return <main>
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-kicker"><span>Uma noite em Abaeté</span><span aria-hidden="true">Nº 01 / 2026</span></div>
@@ -12,7 +16,7 @@ export function HomePage() {
         <div className="date-lockup" aria-label="24 de outubro de 2026"><span>24</span><span className="date-divider">.</span><span>10</span><span className="date-divider">.</span><span>26</span></div>
         <div className="hero-meta"><p>{eventConfig.location}<br />{eventConfig.city}<br />{eventConfig.time}</p><p className="hero-open-bar">OPEN<br /><strong>BAR</strong></p></div>
       </div>
-      <div className="hero-action"><Link className="primary-cta" to="/ingresso"><span>Comprar ingresso</span><span aria-hidden="true">↗</span></Link><p>Entre ou crie sua conta para acessar o convite</p></div>
+      <div className="hero-action"><Link className="primary-cta" to={ticketTarget}><span>{ticketLabel}</span><span aria-hidden="true">↗</span></Link><p>{hasAccount ? 'Acesse seu convite e acompanhe a situação do ingresso' : 'Entre ou crie sua conta para acessar o convite'}</p></div>
     </section>
 
     <section className="open-bar-banner" id="open-bar" aria-label="Evento open bar"><span>OPEN BAR</span><small>BEBIDAS INCLUSAS</small></section>
@@ -27,7 +31,7 @@ export function HomePage() {
           <div><dt>Onde</dt><dd>{eventConfig.location} · {eventConfig.city}</dd></div>
           <div><dt>Formato</dt><dd>Open bar</dd></div>
         </dl>
-        <Link className="paper-cta" to="/ingresso">Comprar ingresso <span aria-hidden="true">↗</span></Link>
+        <Link className="paper-cta" to={ticketTarget}>{ticketLabel} <span aria-hidden="true">↗</span></Link>
       </div>
       <div className="poster-gallery" id="galeria"><Gallery /></div>
     </section>
@@ -37,12 +41,12 @@ export function HomePage() {
         <p className="section-index">02 / SEU CONVITE</p>
         <h2 id="invite-flow-title">SIMPLES E DIRETO.</h2>
         <ol><li><span>01</span><div><strong>Crie sua conta</strong><p>Cadastre seus dados e tenha um convite pessoal.</p></div></li><li><span>02</span><div><strong>Fale com a organização</strong><p>O pagamento é combinado diretamente, fora do site.</p></div></li><li><span>03</span><div><strong>Acompanhe a ativação</strong><p>Quando o pagamento for confirmado, seu QR Code ficará ativo.</p></div></li></ol>
-        <Link className="primary-cta" to="/ingresso"><span>Comprar ingresso</span><span aria-hidden="true">↗</span></Link>
+        <Link className="primary-cta" to={ticketTarget}><span>{ticketLabel}</span><span aria-hidden="true">↗</span></Link>
       </div>
       <aside className="contact-card" aria-labelledby="contact-title">
         <p className="section-index">03 / CONTATO</p>
         <h2 id="contact-title">FALE COM A GENTE.</h2>
-        <a className="whatsapp-home" href={`${eventConfig.whatsappUrl}?text=${encodeURIComponent('Olá! Quero comprar meu ingresso para o Halloween Party.')}`} rel="noreferrer" target="_blank"><span>Comprar ingresso</span><strong>IR PARA O WHATSAPP</strong><b aria-hidden="true">↗</b></a>
+        <Link className="whatsapp-home" to={ticketTarget}><span>{hasAccount ? 'Acesso rápido' : 'Seu convite'}</span><strong>{ticketLabel.toUpperCase()}</strong><b aria-hidden="true">↗</b></Link>
         <a href={eventConfig.instagramUrl} rel="noreferrer" target="_blank"><span>Instagram</span><strong>@halloween_abaete</strong><b aria-hidden="true">↗</b></a>
       </aside>
     </section>
