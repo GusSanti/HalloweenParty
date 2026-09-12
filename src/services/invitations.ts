@@ -1,8 +1,8 @@
-// Compatibility names: persistence and authorization now belong to Supabase.
+// Supabase Auth and PostgreSQL are the only source of identity and invitations.
 import { z } from 'zod'
-import { supabase } from './supabase'
+import { supabase } from '../lib/supabase'
 export type InvitationStatus = 'pending' | 'active' | 'used'
-export interface LocalAccount {
+export interface AttendeeInvitation {
   id: string; fullName: string; email: string; phone: string;
   invitationCode: string; invitationStatus: InvitationStatus;
   createdAt: string; activatedAt: string | null; usedAt: string | null;
@@ -17,7 +17,7 @@ export const signupSchema = z.object({
   phone: z.string().transform(v => v.replace(/\D/g, '')).pipe(z.string().regex(/^[0-9]{10,15}$/)),
   password: z.string().min(12).max(128),
 })
-export async function createLocalAccount(input: z.input<typeof signupSchema>) {
+export async function signUpAttendee(input: z.input<typeof signupSchema>) {
   const parsed = signupSchema.safeParse(input)
   if (!parsed.success) throw new Error('Confira nome, e-mail, WhatsApp e senha de 12 a 128 caracteres.')
   const v = parsed.data
@@ -26,7 +26,7 @@ export async function createLocalAccount(input: z.input<typeof signupSchema>) {
   if (error) throw new Error('Não foi possível cadastrar. Confira os dados ou tente novamente mais tarde.')
   return { needsConfirmation: !data.session }
 }
-export async function loginLocalAccount(email: string, password: string) {
+export async function signIn(email: string, password: string) {
   const { error } = await client().auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
   if (error) throw new Error('Confira e-mail, senha e confirmação do e-mail.')
 }
@@ -38,17 +38,17 @@ export async function getStaffSession() {
   if (profileError) throw new Error('Não foi possível verificar as permissões.')
   return data?.active ? { role: data.role as 'admin' | 'gate', active: true, email: user.email ?? '' } : null
 }
-export async function loginLocalAdmin(email: string, password: string) {
-  await loginLocalAccount(email, password)
-  if (!await getStaffSession()) { await logoutLocalAccount(); throw new Error('Usuário sem acesso à equipe.') }
+export async function signInStaff(email: string, password: string) {
+  await signIn(email, password)
+  if (!await getStaffSession()) { await signOut(); throw new Error('Usuário sem acesso à equipe.') }
 }
-export async function logoutLocalAccount() {
+export async function signOut() {
   const { error } = await client().auth.signOut()
   if (error) throw new Error('Não foi possível sair. Tente novamente.')
 }
-export const logoutLocalAdmin = logoutLocalAccount
-export async function listLocalAccounts(owner?: string): Promise<LocalAccount[]> {
-  const result: LocalAccount[] = []
+export const signOutStaff = signOut
+export async function listInvitations(owner?: string): Promise<AttendeeInvitation[]> {
+  const result: AttendeeInvitation[] = []
   for (let offset = 0; ; offset += 500) {
     let query = client().from('invitations').select('id,code,status,created_at,activated_at,used_at,attendee_profiles!inner(full_name,email,phone),event_settings!inner(active)').eq('event_settings.active', true).order('id').range(offset, offset + 499)
     if (owner) query = query.eq('attendee_user_id', owner)
@@ -62,13 +62,13 @@ export async function listLocalAccounts(owner?: string): Promise<LocalAccount[]>
   }
   return result.sort((a,b) => b.createdAt.localeCompare(a.createdAt))
 }
-export async function getCurrentLocalAccount() {
+export async function getMyInvitation() {
   const { data: { user }, error } = await client().auth.getUser()
   if (error && error.name !== 'AuthSessionMissingError') throw new Error('Não foi possível validar a sessão. Tente novamente.')
   if (!user) return null
   const { error: ensureError } = await client().rpc('ensure_my_invitation')
   if (ensureError) throw new Error('Não foi possível preparar seu convite. Confira o cadastro e o evento ativo.')
-  return (await listLocalAccounts(user.id))[0] ?? null
+  return (await listInvitations(user.id))[0] ?? null
 }
 export async function updateInvitationStatus(id: string, status: InvitationStatus) {
   const { error } = await client().rpc('set_invitation_status', { p_invitation_id: id, p_status: status })

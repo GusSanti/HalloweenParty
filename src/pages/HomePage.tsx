@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { eventConfig } from '../config/event'
 import { Gallery } from '../features/gallery/Gallery'
-import { getCurrentLocalAccount } from '../lib/localInvitations'
+import { useAuth } from '../lib/useAuth'
 
 export function HomePage() {
-  const hasAccount = Boolean(getCurrentLocalAccount())
+  const { user } = useAuth()
+  const hasAccount = Boolean(user)
   const ticketTarget = hasAccount ? '/meu-ingresso' : '/ingresso'
   const ticketLabel = hasAccount ? 'Meu ingresso' : 'Comprar ingresso'
   return <main>

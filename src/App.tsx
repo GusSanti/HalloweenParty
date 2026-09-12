@@ -31,9 +31,6 @@ export default function App() {
           <Route path="entrar" element={<Navigate to="/ingresso" replace />} />
           <Route path="minha-conta" element={<Navigate to="/ingresso" replace />} />
           <Route path="ingressos" element={<Navigate to="/ingresso" replace />} />
-          <Route path="checkout" element={<Navigate to="/ingresso" replace />} />
-          <Route path="pagamento/:orderAccessToken" element={<Navigate to="/ingresso" replace />} />
-          <Route path="ingresso/:ticketAccessToken" element={<Navigate to="/ingresso" replace />} />
           <Route path="novidades" element={<PostsPage />} />
           <Route path="novidades/:slug" element={<PostDetailPage />} />
           <Route path="politica-de-privacidade" element={<PrivacyPage />} />

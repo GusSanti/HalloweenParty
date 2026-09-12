@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-vi.mock('./supabase', () => ({ supabase: null }))
-import { client, signupSchema } from './localInvitations'
+vi.mock('../lib/supabase', () => ({ supabase: null }))
+import { client, signupSchema } from './invitations'
 describe('cadastro Supabase', () => {
   const valid = { fullName: 'Maria Teste', email: ' Maria@Example.com ', phone: '(37) 99999-9999', password: 'senha-longa-123' }
   it('normaliza e-mail e telefone', () => {
@@ -11,7 +11,7 @@ describe('cadastro Supabase', () => {
       expect(signupSchema.safeParse({ ...valid, ...change }).success).toBe(false)
   })
   it('não oferece armazenamento local quando não há conexão configurada', () => {
-    localStorage.setItem('h26-local-admin-session-v1', 'active')
+    localStorage.setItem('role', 'admin')
     expect(() => client()).toThrow('Configure')
   })
 })

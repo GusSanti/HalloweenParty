@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { loginLocalAdmin } from '../../lib/localInvitations'
+import { signInStaff } from '../../services/invitations'
 
 export default function AdminLoginPage() {
   const navigate = useNavigate()
@@ -11,7 +11,7 @@ export default function AdminLoginPage() {
     event.preventDefault(); setError(''); setLoading(true)
     const form = new FormData(event.currentTarget)
     try {
-      await loginLocalAdmin(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
+      await signInStaff(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
       navigate('/admin')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.') }
     finally { setLoading(false) }

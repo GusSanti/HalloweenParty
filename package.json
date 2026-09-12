@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:db": "supabase test db",
+    "test:db": "vitest run src/test/database.test.ts",
+    "check:supabase": "node scripts/check-supabase.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

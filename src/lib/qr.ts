@@ -1,5 +1,5 @@
 import jsQR from 'jsqr'
-// Decode locally: ticket credentials and photos never leave the browser.
+// Decode on the device: ticket credentials and photos never leave the browser.
 export async function readQrImage(file: File) {
   if (!['image/png','image/jpeg','image/gif','image/webp'].includes(file.type) || file.size > 15 * 1024 * 1024)
     throw new Error('Use uma imagem PNG, JPG, GIF ou WebP de até 15 MB.')

@@ -25,10 +25,10 @@ beforeAll(async () => {
     create table storage.objects(id uuid,bucket_id text);
     alter table storage.objects enable row level security;
   `)
-  // pgcrypto is not needed by the final UUID-based generator. PGlite has no
-  // Supabase extensions; Auth/Storage above simulate only their schema contract.
+  // Auth/Storage above simulate only their schema contract. The second file
+  // checks that reapplying the incremental migration preserves the current setup.
   for (const path of ['supabase/SUPABASE_SETUP.sql','supabase/migrations/202609120002_secure_integration.sql']) {
-    const sql = readFileSync(path,'utf8').replace(/create extension if not exists pgcrypto[^;]*;/gi, '')
+    const sql = readFileSync(path,'utf8')
     await db.exec(sql)
   }
   for (const [id, name] of [[attendee,'Maria'],[other,'Joana'],[admin,'Admin'],[gate,'Portaria']]) {

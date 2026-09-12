@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
-import { updateInvitationStatus, type LocalAccount } from '../../lib/localInvitations'
+import { updateInvitationStatus, type AttendeeInvitation } from '../../services/invitations'
 
 import { useAccounts } from '../../lib/useAccounts'
 
@@ -15,7 +15,7 @@ export default function AdminInvitationsPage() {
     const value = query.trim().toLowerCase()
     return value ? accounts.filter((account) => `${account.fullName} ${account.email} ${account.invitationCode}`.toLowerCase().includes(value)) : accounts
   }, [accounts, query])
-  async function change(account: LocalAccount, status: LocalAccount['invitationStatus']) {
+  async function change(account: AttendeeInvitation, status: AttendeeInvitation['invitationStatus']) {
     const action = status === 'active' ? 'ativar' : status === 'used' ? 'marcar como utilizado' : 'voltar para pendente'
     if (!window.confirm(`Deseja ${action} o convite de ${account.fullName}?`)) return
     setBusy(true); setActionError('')

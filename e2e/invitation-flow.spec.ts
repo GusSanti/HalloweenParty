@@ -1,9 +1,29 @@
 import { expect, test } from '@playwright/test'
 
-test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) => {
-  await page.goto('/ingresso')
-  await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toHaveCount(0)
+test('visitante vê comprar ingresso sem provisionar convite', async ({ page }) => {
+  let provisions = 0
+  await page.route('**/rest/v1/rpc/ensure_my_invitation', async route => {
+    provisions++; await route.abort()
+  })
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Comprar ingresso', exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Meu ingresso', exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Comprar ingresso', exact: true }).first().click()
   await expect(page.getByRole('heading', { name: 'VOCÊ JÁ TEM UMA CONTA?' })).toBeVisible()
+  expect(provisions).toBe(0)
+})
+
+test('cadastro aguarda confirmação do Auth e não inventa convite', async ({ page }) => {
+  let signupData: Record<string, unknown> = {}
+  await page.route('**/auth/v1/signup**', async route => {
+    signupData = route.request().postDataJSON()
+    await route.fulfill({ json: {
+      id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated',
+      email: 'maria@example.com', app_metadata: {}, user_metadata: {},
+      identities: [], created_at: new Date().toISOString(),
+    } })
+  })
+  await page.goto('/ingresso')
   await page.getByRole('button', { name: 'Não, criar conta' }).click()
   await page.getByLabel('Nome completo').fill('Maria Teste')
   await page.getByLabel('WhatsApp').fill('37999999999')
@@ -11,33 +31,9 @@ test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) =
   await page.getByLabel('Senha', { exact: true }).fill('senha-segura-123')
   await page.getByLabel('Confirmar senha').fill('senha-segura-123')
   await page.getByRole('button', { name: 'Criar minha conta' }).click()
-  await expect(page.getByRole('heading', { name: 'FALTA 1 PASSO' })).toBeVisible()
-  await expect(page.getByText('Conta criada')).toBeVisible()
-  await expect(page.getByText('Aguarde a ativação')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toBeVisible()
-  await expect(page.locator('.site-header')).toHaveCount(0)
-
-  await page.goto('/admin/login')
-  await page.getByLabel('E-mail').fill('eduardosoares.email@gmail.com')
-  await page.getByLabel('Senha', { exact: true }).fill('bXEz9Pa')
-  await page.getByRole('button', { name: 'Entrar' }).click()
-  await expect(page).toHaveURL(/\/admin$/)
-  await page.goto('/admin/convites')
-  page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Ativar ingresso' }).click()
-
-  await page.goto('/ingresso')
-  await expect(page.getByRole('heading', { name: 'INGRESSO ATIVO' })).toBeVisible()
-  await expect(page.getByAltText(/QR Code do convite/)).toBeVisible()
-  await expect(page.getByText('Precisa de ajuda?')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Falar pelo WhatsApp' })).toBeVisible()
-  await expect(page.locator('.site-header')).toHaveCount(0)
-
-  await page.goto('/')
-  await expect(page.getByRole('link', { name: 'Comprar ingresso', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Meu ingresso', exact: true }).nth(1)).toBeVisible()
-  await page.getByRole('link', { name: 'Meu ingresso', exact: true }).nth(1).click()
-  await expect(page.getByRole('heading', { name: 'INGRESSO ATIVO' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Confira seu e-mail')
+  await expect(page.locator('.invitation-card')).toHaveCount(0)
+  expect(signupData.data).toEqual({ full_name: 'Maria Teste', phone: '37999999999' })
 })
 
 test('menu do evento mantém as ações funcionando sem hash', async ({ page }) => {

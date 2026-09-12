@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { createLocalAccount, loginLocalAccount } from '../../lib/localInvitations'
+import { signUpAttendee, signIn } from '../../services/invitations'
 
 export default function AccountAccessPage() {
   const [searchParams] = useSearchParams()
@@ -20,7 +20,7 @@ export default function AccountAccessPage() {
       if (mode === 'signup') {
         const password = String(form.get('password') ?? '')
         if (password !== String(form.get('confirmation') ?? '')) throw new Error('As senhas não são iguais.')
-        const result = await createLocalAccount({
+        const result = await signUpAttendee({
           fullName: String(form.get('fullName') ?? ''),
           email: String(form.get('email') ?? ''),
           phone: String(form.get('phone') ?? ''),
@@ -31,7 +31,7 @@ export default function AccountAccessPage() {
           return
         }
       } else {
-        await loginLocalAccount(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
+        await signIn(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
       }
       navigate('/meu-ingresso')
     } catch (cause) {

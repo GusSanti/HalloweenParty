@@ -1,7 +1,6 @@
--- Execute AFTER SUPABASE_SETUP.sql (or the initial schema).
+-- Atualização do esquema atual. Execute no banco selecionado em .env.local
+-- somente se esta migração ainda não foi aplicada.
 begin;
-create schema if not exists extensions;
-create extension if not exists pgcrypto with schema extensions;
 
 -- UUIDv4 gives each new bearer code 122 random bits. Existing codes stay valid.
 alter table public.invitations drop constraint if exists invitations_code_check;
@@ -46,6 +45,11 @@ begin
   end if;
   return new;
 end $$;
+
+revoke all on function public.handle_new_attendee() from public,anon,authenticated;
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users
+for each row execute function public.handle_new_attendee();
 
 create or replace function public.ensure_my_invitation() returns uuid
 language plpgsql security definer set search_path = '' as $$

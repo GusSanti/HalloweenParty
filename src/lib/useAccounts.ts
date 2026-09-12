@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { listLocalAccounts, type LocalAccount } from './localInvitations'
+import { listInvitations, type AttendeeInvitation } from '../services/invitations'
 export function useAccounts() {
-  const [accounts, setAccounts] = useState<LocalAccount[]>([])
+  const [accounts, setAccounts] = useState<AttendeeInvitation[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   useEffect(() => {
@@ -10,7 +10,7 @@ export function useAccounts() {
     const refresh = async () => {
       if (running) return
       running = true
-      try { const data = await listLocalAccounts(); if (!disposed) { setAccounts(data); setError('') } }
+      try { const data = await listInvitations(); if (!disposed) { setAccounts(data); setError('') } }
       catch (e) { if (!disposed) { setAccounts([]); setError(e instanceof Error ? e.message : 'Falha ao carregar.') } }
       finally { running = false; if (!disposed) setLoading(false) }
     }

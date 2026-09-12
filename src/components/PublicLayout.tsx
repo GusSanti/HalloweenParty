@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { getCurrentLocalAccount } from '../lib/localInvitations'
+import { useAuth } from '../lib/useAuth'
 import { Assistant } from './Assistant'
 
 export function PublicLayout() {
@@ -9,7 +9,8 @@ export function PublicLayout() {
   const navigate = useNavigate()
   const isHome = location.pathname === '/'
   const isTicketPortal = location.pathname === '/meu-ingresso'
-  const hasAccount = Boolean(getCurrentLocalAccount())
+  const { user } = useAuth()
+  const hasAccount = Boolean(user)
   function jumpTo(id: string) {
     setMenuOpen(false)
     const scroll = () => document.getElementById(id)?.scrollIntoView({ behavior: 'auto', block: 'start' })

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { readQrImage } from '../../lib/goQr'
+import { readQrImage } from '../../lib/qr'
 
 export default function AdminQrReaderPage() {
   const navigate = useNavigate()

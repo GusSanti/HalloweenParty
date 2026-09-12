@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { eventConfig } from '../../config/event'
 import { InvitationQr } from '../../components/InvitationQr'
-import { getCurrentLocalAccount, logoutLocalAccount, type LocalAccount } from '../../lib/localInvitations'
+import { getMyInvitation, signOut, type AttendeeInvitation } from '../../services/invitations'
 
 const statusCopy = {
   pending: { label: 'INGRESSO PENDENTE', title: 'FALTA 1 PASSO', body: 'Sua conta já está pronta. Compre pelo WhatsApp e aguarde a organização ativar seu ingresso.', tone: 'pending' },
@@ -12,7 +12,7 @@ const statusCopy = {
 
 export default function MyAccountPage() {
   const navigate = useNavigate()
-  const [account, setAccount] = useState<LocalAccount | null>(null)
+  const [account, setAccount] = useState<AttendeeInvitation | null>(null)
 
   const [error, setError] = useState('')
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function MyAccountPage() {
       if (running) return
       running = true
       try {
-        const value = await getCurrentLocalAccount()
+        const value = await getMyInvitation()
         if (!active) return
         setAccount(value); setError('')
         if (!value) navigate('/ingresso', { replace: true })
@@ -40,7 +40,7 @@ export default function MyAccountPage() {
   const whatsappMessage = isPending
     ? `Olá! Quero comprar e ativar o convite ${account.invitationCode}. Meu nome é ${account.fullName}.`
     : `Olá! Tenho uma dúvida sobre o convite ${account.invitationCode}. Meu nome é ${account.fullName}.`
-  async function logout() { try { await logoutLocalAccount(); navigate('/') } catch { setError('Não foi possível sair.') } }
+  async function logout() { try { await signOut(); navigate('/') } catch { setError('Não foi possível sair.') } }
 
   return <main className={`account-portal status-${status.tone}`}>
     <header className="account-portal-head"><Link to="/">H<span>26</span></Link><div><span>{account.fullName}</span><button type="button" onClick={logout}>Sair</button></div></header>

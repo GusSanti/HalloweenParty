@@ -13,8 +13,6 @@ dist-ssr
 *.local
 .env
 .env.*
-!.env.example
-!supabase/functions/.env.example
 .sites-runtime/
 .playwright/
 test-results/

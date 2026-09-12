@@ -2,17 +2,31 @@
 
 O cadastro/login usa Supabase Auth. Convites, permissões de equipe e auditoria
 usam PostgreSQL com RLS. Não há conta administrativa fixa no código.
-O arquivo src/lib/localInvitations.ts mantém nomes antigos por compatibilidade,
-mas todas as operações são remotas; não lê contas nem permissões do localStorage.
+A camada src/services/invitations.ts consulta exclusivamente o cliente único de
+src/lib/supabase.ts. Sessões compartilhadas pelas telas usam AuthProvider/useAuth.
 
 ## Aplicação ao banco existente
 
-Se já executou SUPABASE_SETUP.sql, execute somente
-supabase/migrations/202609120002_secure_integration.sql no SQL Editor.
-Esse script atualiza funções e permissões sem apagar cadastros ou convites.
-Para banco novo: execute SUPABASE_SETUP.sql e depois essa migração.
-Não execute novamente o setup antigo depois da migração, pois ele sobrescreve
-as funções protegidas pela versão antiga.
+O arquivo .env.local da raiz é a única fonte da URL/chave da aplicação.
+O Vite lê esse arquivo diretamente e não aceita substituição por .env,
+.env.production, variáveis de terminal ou outra configuração de conexão.
+Após alterar .env.local, reinicie o servidor; ao publicar, gere um novo build
+no ambiente que possui esse arquivo. Node.js 20.19+ ou 22.12+ é necessário.
+
+A pasta supabase NÃO é um banco nem estabelece conexões. Ela contém:
+
+- SUPABASE_SETUP.sql: definição consolidada das tabelas, funções e RLS atuais;
+- migrations/202609120002_secure_integration.sql: atualização para quem aplicou
+  o setup anterior à integração segura.
+
+Se a migração já foi aplicada no seu projeto, esta limpeza não exige recriar
+tabelas. Para um projeto novo, o setup consolidado já inclui as proteções.
+Nenhum dos scripts contém URL, chave ou senha de outro projeto.
+Os scripts são executados manualmente no SQL Editor do projeto correto.
+
+Foram removidos o modelo de ambiente das funções não utilizadas, o cliente
+server-side não utilizado, o esquema/seed de pagamentos e os testes antigos
+com credenciais fixas. A aplicação mantém as tabelas da integração atual.
 
 1. Antes do login, os botões do site mostram **Comprar ingresso**.
 2. Ao clicar, a pessoa responde **Você já tem uma conta?** e escolhe entre **Sim, entrar** e **Não, criar conta**.
@@ -24,8 +38,6 @@ as funções protegidas pela versão antiga.
 
 Em Authentication, configure confirmação de e-mail, senha mínima de 12 caracteres,
 Site URL e Redirect URLs (incluindo /meu-ingresso no domínio local e publicado).
-O arquivo supabase/config.toml configura somente o ambiente da CLI local;
-não altera automaticamente o projeto hospedado.
 Para envio de e-mails a convidados em produção, configure SMTP no Supabase.
 Os limites de requisições de Auth são definidos no painel do Supabase.
 CAPTCHA e MFA não foram habilitados automaticamente; exigem configuração própria.
@@ -66,8 +78,8 @@ Contas do protótipo no localStorage não foram importadas; precisam de novo cad
 
 Posts e galeria já consultam o Supabase. O conteúdo fixo da página inicial permanece
 em src/config/event.ts. Pagamentos continuam externos pelo WhatsApp.
-O assistente visível é o botão do WhatsApp; Edge Functions de IA e upload são
-opcionais e não foram implantadas no projeto remoto por esta alteração.
+O atendimento é feito pelo botão do WhatsApp. As funções de IA e upload que
+não eram utilizadas pela interface foram removidas do repositório.
 
 ## Como testar
 
@@ -91,6 +103,7 @@ npm test
 npm run lint
 npm run build
 npx playwright test --workers=2
+npm run check:supabase
 ```
 
 Os testes de banco usam PostgreSQL embarcado (PGlite) com estruturas simuladas de
@@ -99,3 +112,12 @@ idempotente, transições, auditoria e bloqueio de segunda baixa.
 Não validam envio de e-mails nem a configuração do seu Supabase hospedado.
 Testes de navegador não criam contas reais; validam bloqueios da interface.
 O teste simultâneo entre duas portarias deve ser feito também no banco de homologação.
+
+## Checagem do projeto conectado
+
+npm run check:supabase lê .env.local e faz apenas consultas de leitura ao Auth
+e às tabelas esperadas, sem imprimir chaves ou dados pessoais. Verifica também
+que o acesso anônimo às tabelas privadas é recusado. Não cria usuários, não
+altera permissões e não aplica SQL. Essa checagem não substitui testes com duas
+contas autenticadas, pois a chave pública não pode inspecionar todas as regras
+internas do banco.
