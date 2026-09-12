@@ -1,0 +1,1 @@
+import{r as e}from"./index-DEVBGyrz.js";var t=e();function n(){return(0,t.jsx)(`div`,{className:`turnstile-slot`,children:`Turnstile desativado no ambiente local.`})}export{n as t};

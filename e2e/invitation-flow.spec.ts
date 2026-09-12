@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) => {
   await page.goto('/ingresso')
+  await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Criar conta' }).click()
   await page.getByLabel('Nome completo').fill('Maria Teste')
   await page.getByLabel('WhatsApp').fill('37999999999')
@@ -10,6 +11,8 @@ test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) =
   await page.getByLabel('Confirmar senha').fill('senha-segura-123')
   await page.getByRole('button', { name: 'Criar minha conta' }).click()
   await expect(page.getByRole('heading', { name: 'AGUARDANDO LIBERAÇÃO' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Comprar pelo WhatsApp' })).toBeVisible()
+  await expect(page.locator('.site-header')).toHaveCount(0)
 
   await page.goto('/admin/login')
   await page.getByLabel('E-mail').fill('eduardosoares.email@gmail.com')
@@ -23,11 +26,15 @@ test('cadastro fica pendente e pode ser ativado manualmente', async ({ page }) =
   await page.goto('/ingresso')
   await expect(page.getByRole('heading', { name: 'SEU ACESSO ESTÁ LIBERADO' })).toBeVisible()
   await expect(page.getByAltText(/QR Code do convite/)).toBeVisible()
+  await expect(page.getByText('Ficou com alguma dúvida sobre seu ingresso?')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Tirar dúvida pelo WhatsApp' })).toBeVisible()
+  await expect(page.locator('.site-header')).toHaveCount(0)
 })
 
 test('menu do evento mantém as ações funcionando sem hash', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByLabel('24 de outubro de 2026')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Tirar dúvidas pelo WhatsApp' })).toHaveAttribute('href', /wa\.me\/553798702778/)
   const menu = page.getByRole('button', { name: 'Abrir menu' })
   if (await menu.isVisible()) await menu.click()
   await page.getByRole('button', { name: 'O evento', exact: true }).click()

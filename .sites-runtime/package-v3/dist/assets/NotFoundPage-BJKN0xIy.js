@@ -1,0 +1,1 @@
+import{m as e,r as t}from"./index-DEVBGyrz.js";var n=t();function r(){return(0,n.jsxs)(`main`,{className:`error-page`,children:[(0,n.jsx)(`p`,{children:`404`}),(0,n.jsx)(`h1`,{children:`PÁGINA NÃO ENCONTRADA.`}),(0,n.jsx)(e,{to:`/`,children:`Voltar ao início`})]})}export{r as default};
