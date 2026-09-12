@@ -21,15 +21,15 @@ export default function AdminQrReaderPage() {
   }
 
   return <section className="admin-content qr-reader-admin">
-    <div className="admin-title"><div><span className="eyebrow">Portaria</span><h1>LER QR CODE</h1></div><span className="local-mode-badge">goQR API</span></div>
+    <div className="admin-title"><div><span className="eyebrow">Portaria</span><h1>LER QR CODE</h1></div><span className="local-mode-badge">Leitura local</span></div>
     <div className="qr-reader-card">
       <div className="camera-mark" aria-hidden="true"><span /><i /></div>
       <h2>APONTE PARA O CONVITE</h2>
       <p>Abra a câmera, enquadre somente o QR Code e tire uma foto. Depois da leitura, o cadastro da pessoa será aberto com as mesmas opções de ativar ou dar baixa.</p>
-      <input ref={inputRef} id="qr-photo" type="file" accept="image/png,image/jpeg,image/gif" capture="environment" onChange={read} hidden />
+      <input ref={inputRef} id="qr-photo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" capture="environment" onChange={read} hidden />
       <button type="button" onClick={() => inputRef.current?.click()} disabled={loading}>{loading ? 'Lendo QR Code...' : 'Abrir câmera e ler QR Code'}</button>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <small>A imagem é enviada ao serviço goQR apenas para decodificação. Use PNG ou JPG com até 1 MB; fotos maiores são reduzidas antes do envio.</small>
+      <small>A foto é processada somente no seu dispositivo. Use PNG, JPG, GIF ou WebP de até 15 MB.</small>
     </div>
   </section>
 }

@@ -7,6 +7,7 @@ export default function AccountAccessPage() {
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('modo') === 'cadastro' ? 'signup' : 'login')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -17,12 +18,16 @@ export default function AccountAccessPage() {
       if (mode === 'signup') {
         const password = String(form.get('password') ?? '')
         if (password !== String(form.get('confirmation') ?? '')) throw new Error('As senhas não são iguais.')
-        await createLocalAccount({
+        const result = await createLocalAccount({
           fullName: String(form.get('fullName') ?? ''),
           email: String(form.get('email') ?? ''),
           phone: String(form.get('phone') ?? ''),
           password,
         })
+        if (result.needsConfirmation) {
+          setNotice('Confira seu e-mail para confirmar o cadastro. Se já tiver uma conta, entre com sua senha.')
+          return
+        }
       } else {
         await loginLocalAccount(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
       }
@@ -51,8 +56,9 @@ export default function AccountAccessPage() {
           <label>WhatsApp<input name="phone" type="tel" inputMode="tel" autoComplete="tel" minLength={10} maxLength={20} placeholder="(37) 99999-9999" required /></label>
         </>}
         <label>E-mail<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
-        <label>Senha<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={8} required /></label>
+        <label>Senha<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 12 : 1} maxLength={128} required /></label>
         {mode === 'signup' && <label>Confirmar senha<input name="confirmation" type="password" autoComplete="new-password" minLength={8} required /></label>}
+        {notice && <p role="status">{notice}</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="account-submit" type="submit" disabled={loading}>{loading ? 'Aguarde...' : mode === 'signup' ? 'Criar minha conta' : 'Entrar na minha conta'}</button>
         {mode === 'signup' && <small>Ao criar a conta, seu convite fica pendente até a confirmação manual da organização.</small>}

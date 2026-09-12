@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { eventConfig } from '../../config/event'
-import { createQrImageUrl } from '../../lib/goQr'
+import { InvitationQr } from '../../components/InvitationQr'
 import { getCurrentLocalAccount, logoutLocalAccount, type LocalAccount } from '../../lib/localInvitations'
 
 const statusCopy = {
@@ -12,23 +12,35 @@ const statusCopy = {
 
 export default function MyAccountPage() {
   const navigate = useNavigate()
-  const [account, setAccount] = useState<LocalAccount | null>(() => getCurrentLocalAccount())
+  const [account, setAccount] = useState<LocalAccount | null>(null)
 
+  const [error, setError] = useState('')
   useEffect(() => {
-    if (!account) { navigate('/entrar', { replace: true }); return }
-    const refresh = () => setAccount(getCurrentLocalAccount())
-    window.addEventListener('h26:accounts-changed', refresh)
-    return () => window.removeEventListener('h26:accounts-changed', refresh)
-  }, [account, navigate])
-
+    let active = true
+    let running = false
+    const refresh = async () => {
+      if (running) return
+      running = true
+      try {
+        const value = await getCurrentLocalAccount()
+        if (!active) return
+        setAccount(value); setError('')
+        if (!value) navigate('/ingresso', { replace: true })
+      } catch (e) { if (active) { setAccount(null); setError(e instanceof Error ? e.message : 'Falha ao carregar.') } }
+      finally { running = false }
+    }
+    void refresh()
+    const timer = setInterval(refresh, 10000)
+    return () => { active = false; clearInterval(timer) }
+  }, [navigate])
+  if (error) return <main className="route-loading" role="alert">{error}</main>
   if (!account) return <main className="route-loading">Abrindo sua conta...</main>
   const status = statusCopy[account.invitationStatus]
-  const qr = createQrImageUrl(`H26:${account.invitationCode}`)
   const isPending = account.invitationStatus === 'pending'
   const whatsappMessage = isPending
     ? `Olá! Quero comprar e ativar o convite ${account.invitationCode}. Meu nome é ${account.fullName}.`
     : `Olá! Tenho uma dúvida sobre o convite ${account.invitationCode}. Meu nome é ${account.fullName}.`
-  function logout() { logoutLocalAccount(); navigate('/') }
+  async function logout() { try { await logoutLocalAccount(); navigate('/') } catch { setError('Não foi possível sair.') } }
 
   return <main className={`account-portal status-${status.tone}`}>
     <header className="account-portal-head"><Link to="/">H<span>26</span></Link><div><span>{account.fullName}</span><button type="button" onClick={logout}>Sair</button></div></header>
@@ -36,7 +48,7 @@ export default function MyAccountPage() {
       <div className="status-copy"><p><i aria-hidden="true" />{status.label}</p><h1 id="status-title">{status.title}</h1><div className="status-explanation">{status.body}</div><div className="ticket-whatsapp"><span>{isPending ? 'Ainda não comprou? Combine diretamente com a organização.' : 'Ficou com alguma dúvida sobre seu ingresso? Clique abaixo e fale com a organização.'}</span><a className="whatsapp-buy" href={`${eventConfig.whatsappUrl}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noreferrer"><span>{isPending ? 'Comprar pelo WhatsApp' : 'Tirar dúvida pelo WhatsApp'}</span><b aria-hidden="true">↗</b></a></div><dl><div><dt>Data</dt><dd>24.10.2026 · {eventConfig.time}</dd></div><div><dt>Local</dt><dd>{eventConfig.location} · {eventConfig.city}</dd></div><div><dt>Formato</dt><dd>Open bar</dd></div></dl></div>
       <article className="invitation-card">
         <div className="invitation-card-top"><span>CONVITE PESSOAL</span><strong>{account.invitationStatus === 'active' ? 'ATIVO' : account.invitationStatus === 'used' ? 'UTILIZADO' : 'PENDENTE'}</strong></div>
-        <div className="invitation-qr">{qr && <img src={qr} alt={`QR Code do convite ${account.invitationCode}`} />}{account.invitationStatus === 'pending' && <span>AGUARDANDO<br />ATIVAÇÃO</span>}</div>
+        <div className="invitation-qr">{account.invitationStatus === 'active' && <InvitationQr key={account.invitationCode} code={account.invitationCode} />}{account.invitationStatus === 'pending' && <span>AGUARDANDO<br />ATIVAÇÃO</span>}</div>
         <div className="invitation-code"><span>{account.invitationCode}</span><small>{account.fullName}</small></div>
       </article>
     </section>

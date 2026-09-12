@@ -1,133 +1,77 @@
+// Compatibility names: persistence and authorization now belong to Supabase.
+import { z } from 'zod'
+import { supabase } from './supabase'
 export type InvitationStatus = 'pending' | 'active' | 'used'
-
 export interface LocalAccount {
-  id: string
-  fullName: string
-  email: string
-  phone: string
-  passwordSalt: string
-  passwordHash: string
-  invitationCode: string
-  invitationStatus: InvitationStatus
-  createdAt: string
-  activatedAt: string | null
-  usedAt: string | null
+  id: string; fullName: string; email: string; phone: string;
+  invitationCode: string; invitationStatus: InvitationStatus;
+  createdAt: string; activatedAt: string | null; usedAt: string | null;
 }
-
-const accountsKey = 'h26-local-accounts-v1'
-const attendeeSessionKey = 'h26-attendee-session-v1'
-const adminSessionKey = 'h26-local-admin-session-v1'
-const defaultAdmin = {
-  email: 'eduardosoares.email@gmail.com',
-  passwordSalt: 'eVnJOvGwq7VR7k7ui1fDKA==',
-  passwordHash: 'p8/O2LSnp8IMcuUeyUvjWPAC3n6EYuIViY2k9NI+XVo=',
+export function client() {
+  if (!supabase) throw new Error('Configure a conexão com o Supabase para continuar.')
+  return supabase
 }
-
-function readJson<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? '') as T } catch { return fallback }
+export const signupSchema = z.object({
+  fullName: z.string().trim().min(3).max(120),
+  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
+  phone: z.string().transform(v => v.replace(/\D/g, '')).pipe(z.string().regex(/^[0-9]{10,15}$/)),
+  password: z.string().min(12).max(128),
+})
+export async function createLocalAccount(input: z.input<typeof signupSchema>) {
+  const parsed = signupSchema.safeParse(input)
+  if (!parsed.success) throw new Error('Confira nome, e-mail, WhatsApp e senha de 12 a 128 caracteres.')
+  const v = parsed.data
+  const { data, error } = await client().auth.signUp({ email: v.email, password: v.password,
+    options: { emailRedirectTo: window.location.origin + '/meu-ingresso', data: { full_name: v.fullName, phone: v.phone } } })
+  if (error) throw new Error('Não foi possível cadastrar. Confira os dados ou tente novamente mais tarde.')
+  return { needsConfirmation: !data.session }
 }
-
-function bytesToBase64(bytes: Uint8Array) {
-  let value = ''
-  bytes.forEach((byte) => { value += String.fromCharCode(byte) })
-  return btoa(value)
+export async function loginLocalAccount(email: string, password: string) {
+  const { error } = await client().auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+  if (error) throw new Error('Confira e-mail, senha e confirmação do e-mail.')
 }
-
-function base64ToBytes(value: string) {
-  return Uint8Array.from(atob(value), (character) => character.charCodeAt(0))
+export async function getStaffSession() {
+  const { data: { user }, error } = await client().auth.getUser()
+  if (error && error.name !== 'AuthSessionMissingError') throw new Error('Não foi possível validar a sessão. Tente novamente.')
+  if (!user) return null
+  const { data, error: profileError } = await client().from('staff_profiles').select('role,active').eq('user_id', user.id).maybeSingle()
+  if (profileError) throw new Error('Não foi possível verificar as permissões.')
+  return data?.active ? { role: data.role as 'admin' | 'gate', active: true, email: user.email ?? '' } : null
 }
-
-async function derivePassword(password: string, salt: string) {
-  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: base64ToBytes(salt), iterations: 120_000, hash: 'SHA-256' }, material, 256)
-  return bytesToBase64(new Uint8Array(bits))
+export async function loginLocalAdmin(email: string, password: string) {
+  await loginLocalAccount(email, password)
+  if (!await getStaffSession()) { await logoutLocalAccount(); throw new Error('Usuário sem acesso à equipe.') }
 }
-
-function newSalt() {
-  return bytesToBase64(crypto.getRandomValues(new Uint8Array(16)))
+export async function logoutLocalAccount() {
+  const { error } = await client().auth.signOut()
+  if (error) throw new Error('Não foi possível sair. Tente novamente.')
 }
-
-function newInvitationCode() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const values = crypto.getRandomValues(new Uint8Array(8))
-  const token = Array.from(values, (value) => alphabet[value % alphabet.length]).join('')
-  return `H26-${token.slice(0, 4)}-${token.slice(4)}`
-}
-
-export function listLocalAccounts() {
-  return readJson<LocalAccount[]>(accountsKey, []).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-}
-
-function saveAccounts(accounts: LocalAccount[]) {
-  localStorage.setItem(accountsKey, JSON.stringify(accounts))
-  window.dispatchEvent(new Event('h26:accounts-changed'))
-}
-
-export async function createLocalAccount(input: { fullName: string; email: string; phone: string; password: string }) {
-  const accounts = listLocalAccounts()
-  const email = input.email.trim().toLowerCase()
-  if (accounts.some((account) => account.email === email)) throw new Error('Já existe uma conta com este e-mail.')
-  const passwordSalt = newSalt()
-  const account: LocalAccount = {
-    id: crypto.randomUUID(),
-    fullName: input.fullName.trim(),
-    email,
-    phone: input.phone.replace(/\D/g, ''),
-    passwordSalt,
-    passwordHash: await derivePassword(input.password, passwordSalt),
-    invitationCode: newInvitationCode(),
-    invitationStatus: 'pending',
-    createdAt: new Date().toISOString(),
-    activatedAt: null,
-    usedAt: null,
+export const logoutLocalAdmin = logoutLocalAccount
+export async function listLocalAccounts(owner?: string): Promise<LocalAccount[]> {
+  const result: LocalAccount[] = []
+  for (let offset = 0; ; offset += 500) {
+    let query = client().from('invitations').select('id,code,status,created_at,activated_at,used_at,attendee_profiles!inner(full_name,email,phone),event_settings!inner(active)').eq('event_settings.active', true).order('id').range(offset, offset + 499)
+    if (owner) query = query.eq('attendee_user_id', owner)
+    const { data, error } = await query
+    if (error) throw new Error('Não foi possível carregar os convites. Verifique a conexão.')
+    for (const row of data ?? []) {
+      const p = (Array.isArray(row.attendee_profiles) ? row.attendee_profiles[0] : row.attendee_profiles) as { full_name: string; email: string; phone: string }
+      result.push({ id: row.id, fullName: p.full_name, email: p.email, phone: p.phone, invitationCode: row.code, invitationStatus: row.status, createdAt: row.created_at, activatedAt: row.activated_at, usedAt: row.used_at })
+    }
+    if (!data || data.length < 500) break
   }
-  saveAccounts([...accounts, account])
-  sessionStorage.setItem(attendeeSessionKey, account.id)
-  return account
+  return result.sort((a,b) => b.createdAt.localeCompare(a.createdAt))
 }
-
-export async function loginLocalAccount(emailValue: string, password: string) {
-  const email = emailValue.trim().toLowerCase()
-  const account = listLocalAccounts().find((candidate) => candidate.email === email)
-  if (!account || await derivePassword(password, account.passwordSalt) !== account.passwordHash) throw new Error('E-mail ou senha incorretos.')
-  sessionStorage.setItem(attendeeSessionKey, account.id)
-  return account
+export async function getCurrentLocalAccount() {
+  const { data: { user }, error } = await client().auth.getUser()
+  if (error && error.name !== 'AuthSessionMissingError') throw new Error('Não foi possível validar a sessão. Tente novamente.')
+  if (!user) return null
+  const { error: ensureError } = await client().rpc('ensure_my_invitation')
+  if (ensureError) throw new Error('Não foi possível preparar seu convite. Confira o cadastro e o evento ativo.')
+  return (await listLocalAccounts(user.id))[0] ?? null
 }
-
-export function getCurrentLocalAccount() {
-  const id = sessionStorage.getItem(attendeeSessionKey)
-  return id ? listLocalAccounts().find((account) => account.id === id) ?? null : null
-}
-
-export function logoutLocalAccount() {
-  sessionStorage.removeItem(attendeeSessionKey)
-}
-
-export function updateInvitationStatus(id: string, status: InvitationStatus) {
-  const now = new Date().toISOString()
-  const accounts = listLocalAccounts().map((account) => account.id === id ? {
-    ...account,
-    invitationStatus: status,
-    activatedAt: status === 'active' ? (account.activatedAt ?? now) : account.activatedAt,
-    usedAt: status === 'used' ? now : status === 'active' ? null : account.usedAt,
-  } : account)
-  saveAccounts(accounts)
-}
-
-export async function loginLocalAdmin(emailValue: string, password: string) {
-  if (defaultAdmin.email !== emailValue.trim().toLowerCase() || await derivePassword(password, defaultAdmin.passwordSalt) !== defaultAdmin.passwordHash) throw new Error('E-mail ou senha incorretos.')
-  sessionStorage.setItem(adminSessionKey, 'active')
-  return defaultAdmin.email
-}
-
-export function isLocalAdminAuthenticated() {
-  return sessionStorage.getItem(adminSessionKey) === 'active'
-}
-
-export function getLocalAdminEmail() {
-  return defaultAdmin.email
-}
-
-export function logoutLocalAdmin() {
-  sessionStorage.removeItem(adminSessionKey)
+export async function updateInvitationStatus(id: string, status: InvitationStatus) {
+  const { error } = await client().rpc('set_invitation_status', { p_invitation_id: id, p_status: status })
+  if (error) throw new Error('Alteração recusada. Atualize a lista e confira suas permissões.')
+  window.dispatchEvent(new Event('h26:accounts-changed'))
 }
