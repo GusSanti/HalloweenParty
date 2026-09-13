@@ -13,14 +13,18 @@ test('visitante vê comprar ingresso sem provisionar convite', async ({ page }) 
   expect(provisions).toBe(0)
 })
 
-test('cadastro aguarda confirmação do Auth e não inventa convite', async ({ page }) => {
+test('cadastro autenticado segue imediatamente para o ingresso', async ({ page }) => {
   let signupData: Record<string, unknown> = {}
   await page.route('**/auth/v1/signup**', async route => {
     signupData = route.request().postDataJSON()
-    await route.fulfill({ json: {
+    const user = {
       id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated',
       email: 'maria@example.com', app_metadata: {}, user_metadata: {},
       identities: [], created_at: new Date().toISOString(),
+    }
+    await route.fulfill({ json: {
+      access_token: 'test-access-token', refresh_token: 'test-refresh-token',
+      token_type: 'bearer', expires_in: 3600, user,
     } })
   })
   await page.goto('/ingresso')
@@ -28,11 +32,10 @@ test('cadastro aguarda confirmação do Auth e não inventa convite', async ({ p
   await page.getByLabel('Nome completo').fill('Maria Teste')
   await page.getByLabel('WhatsApp').fill('37999999999')
   await page.getByLabel('E-mail').fill('maria@example.com')
-  await page.getByLabel('Senha', { exact: true }).fill('senha-segura-123')
-  await page.getByLabel('Confirmar senha').fill('senha-segura-123')
+  await page.getByLabel('Senha', { exact: true }).fill('123456')
+  await page.getByLabel('Confirmar senha').fill('123456')
   await page.getByRole('button', { name: 'Criar minha conta' }).click()
-  await expect(page.getByRole('status')).toContainText('Confira seu e-mail')
-  await expect(page.locator('.invitation-card')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/meu-ingresso/)
   expect(signupData.data).toEqual({ full_name: 'Maria Teste', phone: '37999999999' })
 })
 

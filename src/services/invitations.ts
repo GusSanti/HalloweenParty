@@ -1,6 +1,7 @@
 // Supabase Auth and PostgreSQL are the only source of identity and invitations.
 import { z } from 'zod'
 import { supabase } from '../lib/supabase'
+import type { AuthError } from '@supabase/supabase-js'
 export type InvitationStatus = 'pending' | 'active' | 'used'
 export interface AttendeeInvitation {
   id: string; fullName: string; email: string; phone: string;
@@ -11,24 +12,68 @@ export function client() {
   if (!supabase) throw new Error('Configure a conexão com o Supabase para continuar.')
   return supabase
 }
+
+export class AuthenticationError extends Error {
+  readonly code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'AuthenticationError'
+    this.code = code
+  }
+}
+
+export function authMessage(error: Pick<AuthError, 'code' | 'status'>, operation: 'signup' | 'signin') {
+  const code = error.code
+  if (code === 'email_not_confirmed') return 'Esta conta antiga ainda está pendente de liberação no Supabase. Fale com a organização.'
+  if (code === 'invalid_credentials') return 'E-mail ou senha incorretos.'
+  if (code === 'user_already_exists' || code === 'email_exists') return 'Este e-mail já possui uma conta. Entre com a senha ou recupere o acesso.'
+  if (code === 'weak_password') return 'A senha não atende aos requisitos de segurança do cadastro.'
+  if (code === 'email_address_invalid') return 'Informe um endereço de e-mail válido.'
+  if (code === 'email_address_not_authorized') return 'O servidor de e-mail ainda não está autorizado a enviar para este endereço.'
+  if (code === 'email_provider_disabled') return 'O cadastro com e-mail e senha está desativado no Supabase. Ative o provedor Email em Authentication → Sign In / Providers.'
+  if (code === 'over_email_send_rate_limit') return 'Muitos e-mails foram solicitados. Aguarde alguns minutos antes de tentar novamente.'
+  if (code === 'over_request_rate_limit') return 'Muitas tentativas foram feitas deste dispositivo. Aguarde alguns minutos antes de tentar novamente.'
+  if (code === 'captcha_failed') return 'A verificação de segurança falhou. Recarregue a página e tente novamente.'
+  if (code === 'signup_disabled') return 'Novos cadastros estão temporariamente desativados.'
+  if (operation === 'signup' && (code === 'unexpected_failure' || error.status === 500))
+    return 'O banco de dados recusou o cadastro. A organização precisa verificar os gatilhos do Supabase.'
+  if (operation === 'signin') return 'Não foi possível entrar agora. Tente novamente em alguns instantes.'
+  return 'Não foi possível cadastrar agora. Tente novamente em alguns instantes.'
+}
+
+export function invitationMessage(error: { code?: string; message?: string }) {
+  if (error.code === 'PGRST202')
+    return 'A configuração de convites ainda não foi aplicada no Supabase. Execute a migration mais recente no SQL Editor.'
+  if (error.message?.includes('active_event_not_found'))
+    return 'Nenhum evento ativo foi encontrado. Ative o evento no painel administrativo.'
+  if (error.message?.includes('invalid_attendee_metadata') || error.message?.includes('invalid_attendee_profile'))
+    return 'Seu cadastro está incompleto. Saia da conta e refaça o cadastro com nome e WhatsApp válidos.'
+  if (error.code === '42501')
+    return 'O Supabase recusou o acesso à criação do convite. Aplique as permissões da migration mais recente.'
+  return 'Não foi possível preparar seu convite. Atualize a página; se continuar, verifique os logs do Supabase.'
+}
 export const signupSchema = z.object({
   fullName: z.string().trim().min(3).max(120),
   email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
   phone: z.string().transform(v => v.replace(/\D/g, '')).pipe(z.string().regex(/^[0-9]{10,15}$/)),
-  password: z.string().min(12).max(128),
+  password: z.string().min(6).max(128),
 })
 export async function signUpAttendee(input: z.input<typeof signupSchema>) {
   const parsed = signupSchema.safeParse(input)
-  if (!parsed.success) throw new Error('Confira nome, e-mail, WhatsApp e senha de 12 a 128 caracteres.')
+  if (!parsed.success) throw new Error('Confira nome, e-mail, WhatsApp e senha de 6 a 128 caracteres.')
   const v = parsed.data
   const { data, error } = await client().auth.signUp({ email: v.email, password: v.password,
     options: { emailRedirectTo: window.location.origin + '/meu-ingresso', data: { full_name: v.fullName, phone: v.phone } } })
-  if (error) throw new Error('Não foi possível cadastrar. Confira os dados ou tente novamente mais tarde.')
-  return { needsConfirmation: !data.session }
+  if (error) throw new AuthenticationError(authMessage(error, 'signup'), error.code)
+  if (!data.session) throw new AuthenticationError(
+    'O cadastro foi criado, mas o Supabase ainda exige confirmação de e-mail. Desative “Confirm email” no painel de autenticação.',
+    'email_confirmation_enabled',
+  )
 }
 export async function signIn(email: string, password: string) {
-  const { error } = await client().auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
-  if (error) throw new Error('Confira e-mail, senha e confirmação do e-mail.')
+  const normalizedEmail = email.trim().toLowerCase()
+  const { error } = await client().auth.signInWithPassword({ email: normalizedEmail, password })
+  if (error) throw new AuthenticationError(authMessage(error, 'signin'), error.code)
 }
 export async function getStaffSession() {
   const { data: { user }, error } = await client().auth.getUser()
@@ -67,7 +112,7 @@ export async function getMyInvitation() {
   if (error && error.name !== 'AuthSessionMissingError') throw new Error('Não foi possível validar a sessão. Tente novamente.')
   if (!user) return null
   const { error: ensureError } = await client().rpc('ensure_my_invitation')
-  if (ensureError) throw new Error('Não foi possível preparar seu convite. Confira o cadastro e o evento ativo.')
+  if (ensureError) throw new Error(invitationMessage(ensureError))
   return (await listInvitations(user.id))[0] ?? null
 }
 export async function updateInvitationStatus(id: string, status: InvitationStatus) {

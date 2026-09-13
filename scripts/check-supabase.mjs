@@ -12,7 +12,8 @@ try {
   if (!settings.ok) process.exitCode = 1
   else {
     const data = await settings.json()
-    console.log('Confirmação de e-mail:', data.mailer_autoconfirm === false ? 'exigida' : 'verificar no painel')
+    console.log('Provedor de e-mail:', data.external?.email === true ? 'ativado' : 'DESATIVADO')
+    console.log('Confirmação de e-mail:', data.mailer_autoconfirm === false ? 'exigida' : 'desativada')
   }
   for (const [table, columns] of Object.entries({
     event_settings: 'id,active', posts: 'slug,status', gallery_items: 'id,image_path',

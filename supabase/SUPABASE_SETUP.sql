@@ -224,44 +224,14 @@ language sql volatile set search_path = '' as $$
 $$;
 revoke all on function public.generate_invitation_code() from public, anon, authenticated;
 
--- Runs before Auth inserts: browser metadata must be validated server-side.
--- Admin-created accounts can omit attendee fields; they cannot obtain a ticket
--- until a valid attendee profile has been supplied.
-create or replace function public.validate_attendee_signup() returns trigger
-language plpgsql set search_path = '' as $$
-begin
-  if new.raw_user_meta_data ? 'full_name' or new.raw_user_meta_data ? 'phone' then
-    if char_length(trim(coalesce(new.raw_user_meta_data->>'full_name',''))) not between 3 and 120
-       or regexp_replace(coalesce(new.raw_user_meta_data->>'phone',''),'[^0-9]','','g') !~ '^[0-9]{10,15}$'
-    then raise exception 'invalid_attendee_metadata'; end if;
-  end if;
-  return new;
-end $$;
+-- Do not attach application triggers to auth.users. A failing Auth trigger turns
+-- an otherwise valid signup into the opaque "Database error saving new user".
+-- Attendee metadata is validated by ensure_my_invitation after authentication,
+-- before any application profile or ticket can be created.
 drop trigger if exists h26_validate_attendee_signup on auth.users;
-create trigger h26_validate_attendee_signup before insert on auth.users
-for each row execute function public.validate_attendee_signup();
-revoke all on function public.validate_attendee_signup() from public, anon, authenticated;
-
--- Replace the previous trigger: only valid attendees receive profiles/tickets.
--- Provisioning is deferred until email confirmation and authenticated access.
-create or replace function public.handle_new_attendee() returns trigger
-language plpgsql security definer set search_path = '' as $$
-begin
-  if char_length(trim(coalesce(new.raw_user_meta_data->>'full_name',''))) between 3 and 120
-     and regexp_replace(coalesce(new.raw_user_meta_data->>'phone',''),'[^0-9]','','g') ~ '^[0-9]{10,15}$'
-     and new.email is not null then
-    insert into public.attendee_profiles(user_id,full_name,email,phone)
-    values(new.id,trim(new.raw_user_meta_data->>'full_name'),lower(new.email),
-      regexp_replace(new.raw_user_meta_data->>'phone','[^0-9]','','g'))
-    on conflict (user_id) do nothing;
-  end if;
-  return new;
-end $$;
-
-revoke all on function public.handle_new_attendee() from public,anon,authenticated;
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created after insert on auth.users
-for each row execute function public.handle_new_attendee();
+drop function if exists public.validate_attendee_signup();
+drop function if exists public.handle_new_attendee();
 
 create or replace function public.ensure_my_invitation() returns uuid
 language plpgsql security definer set search_path = '' as $$
@@ -269,7 +239,6 @@ declare actor uuid := auth.uid(); event_id_value uuid; invitation_id uuid; perso
 begin
   if actor is null then raise exception 'unauthorized'; end if;
   select * into person from auth.users where id = actor;
-  if person.email_confirmed_at is null then raise exception 'email_not_confirmed'; end if;
   select id into event_id_value from public.event_settings where active;
   if event_id_value is null then raise exception 'active_event_not_found'; end if;
   -- Serialize provisioning for this user, including simultaneous tabs.

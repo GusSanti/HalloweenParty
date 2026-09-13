@@ -7,7 +7,6 @@ export default function AccountAccessPage() {
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<'choice' | 'login' | 'signup'>(searchParams.get('modo') === 'cadastro' ? 'signup' : 'choice')
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -16,22 +15,19 @@ export default function AccountAccessPage() {
     if (mode === 'choice') return
     setError(''); setLoading(true)
     const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '').trim().toLowerCase()
     try {
       if (mode === 'signup') {
         const password = String(form.get('password') ?? '')
         if (password !== String(form.get('confirmation') ?? '')) throw new Error('As senhas não são iguais.')
-        const result = await signUpAttendee({
+        await signUpAttendee({
           fullName: String(form.get('fullName') ?? ''),
-          email: String(form.get('email') ?? ''),
+          email,
           phone: String(form.get('phone') ?? ''),
           password,
         })
-        if (result.needsConfirmation) {
-          setNotice('Confira seu e-mail para confirmar o cadastro. Se já tiver uma conta, entre com sua senha.')
-          return
-        }
       } else {
-        await signIn(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
+        await signIn(email, String(form.get('password') ?? ''))
       }
       navigate('/meu-ingresso')
     } catch (cause) {
@@ -61,9 +57,8 @@ export default function AccountAccessPage() {
           <label>WhatsApp<input name="phone" type="tel" inputMode="tel" autoComplete="tel" minLength={10} maxLength={20} placeholder="(37) 99999-9999" required /></label>
         </>}
         <label>E-mail<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
-        <label>Senha<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 12 : 1} maxLength={128} required /></label>
-        {mode === 'signup' && <label>Confirmar senha<input name="confirmation" type="password" autoComplete="new-password" minLength={8} required /></label>}
-        {notice && <p role="status">{notice}</p>}
+        <label>Senha<input name="password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 6 : 1} maxLength={128} required /></label>
+        {mode === 'signup' && <label>Confirmar senha<input name="confirmation" type="password" autoComplete="new-password" minLength={6} required /></label>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="account-submit" type="submit" disabled={loading}>{loading ? 'Aguarde...' : mode === 'signup' ? 'Criar minha conta' : 'Entrar na minha conta'}</button>
         {mode === 'signup' && <small>Ao criar a conta, seu convite fica pendente até a confirmação manual da organização.</small>}

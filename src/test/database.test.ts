@@ -25,9 +25,15 @@ beforeAll(async () => {
     create table storage.objects(id uuid,bucket_id text);
     alter table storage.objects enable row level security;
   `)
-  // Auth/Storage above simulate only their schema contract. The second file
-  // checks that reapplying the incremental migration preserves the current setup.
-  for (const path of ['supabase/SUPABASE_SETUP.sql','supabase/migrations/202609120002_secure_integration.sql']) {
+  // Auth/Storage above simulate only their schema contract. The migration files
+  // also check that upgrading an existing setup preserves the current behavior.
+  for (const path of [
+    'supabase/SUPABASE_SETUP.sql',
+    'supabase/migrations/202609120002_secure_integration.sql',
+    'supabase/migrations/202609130001_defer_profile_provisioning.sql',
+    'supabase/migrations/202609130002_disable_email_confirmation.sql',
+    'supabase/migrations/202609130003_restore_invitation_rpc.sql',
+  ]) {
     const sql = readFileSync(path,'utf8')
     await db.exec(sql)
   }
@@ -39,8 +45,13 @@ beforeAll(async () => {
 }, 30000)
 afterAll(async () => { await db.close() })
 describe('PostgreSQL: isolamento e convites', () => {
-  it('valida metadata no servidor antes do cadastro', async () => {
-    await expect(db.exec("insert into auth.users(id,email,raw_user_meta_data) values(gen_random_uuid(),'bad@example.com','{\"full_name\":\"X\",\"phone\":\"1\"}')")).rejects.toThrow('invalid_attendee_metadata')
+  it('cadastro Auth não depende de trigger e dados inválidos não geram perfil ou convite', async () => {
+    const id = '00000000-0000-4000-8000-000000000006'
+    await db.query("insert into auth.users(id,email,raw_user_meta_data,email_confirmed_at) values($1,'bad@example.com',$2,now())",
+      [id, JSON.stringify({ full_name:'X',phone:'1' })])
+    expect((await db.query('select user_id from attendee_profiles where user_id=$1',[id])).rows).toHaveLength(0)
+    await expect(asUser(id,'select public.ensure_my_invitation()')).rejects.toThrow('invalid_attendee_metadata')
+    expect((await db.query('select id from invitations where attendee_user_id=$1',[id])).rows).toHaveLength(0)
   })
   it('gera apenas um convite por usuário e evento', async () => {
     const first = await asUser(attendee,'select public.ensure_my_invitation() as id')
@@ -64,12 +75,12 @@ describe('PostgreSQL: isolamento e convites', () => {
     try { await expect(db.exec('select * from attendee_profiles')).rejects.toThrow() }
     finally { await db.exec('reset role') }
   })
-  it('não provisiona convite sem confirmação de e-mail', async () => {
+  it('provisiona o convite sem depender de confirmação de e-mail', async () => {
     const id = '00000000-0000-4000-8000-000000000005'
     await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'unconfirmed@example.com',$2)",
       [id, JSON.stringify({ full_name:'Sem confirmação',phone:'37999999999' })])
-    await expect(asUser(id,'select public.ensure_my_invitation()')).rejects.toThrow('email_not_confirmed')
-    expect((await db.query('select id from invitations where attendee_user_id=$1',[id])).rows).toHaveLength(0)
+    await asUser(id,'select public.ensure_my_invitation()')
+    expect((await db.query('select id from invitations where attendee_user_id=$1',[id])).rows).toHaveLength(1)
   })
   it('bloqueia baixa pendente, portaria ativando e segunda baixa', async () => {
     const { rows } = await db.query<{id:string;code:string}>('select id,code from invitations where attendee_user_id=$1',[attendee])

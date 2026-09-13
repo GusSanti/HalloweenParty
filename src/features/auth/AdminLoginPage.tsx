@@ -10,8 +10,9 @@ export default function AdminLoginPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setLoading(true)
     const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '').trim().toLowerCase()
     try {
-      await signInStaff(String(form.get('email') ?? ''), String(form.get('password') ?? ''))
+      await signInStaff(email, String(form.get('password') ?? ''))
       navigate('/admin')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.') }
     finally { setLoading(false) }

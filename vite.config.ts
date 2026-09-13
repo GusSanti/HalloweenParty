@@ -3,18 +3,18 @@ import { defineConfig } from 'vite'
 import { readFileSync } from 'node:fs'
 import { parseEnv } from 'node:util'
 
-// The project selected in .env.local is the sole connection source.
-// Do not merge .env, mode-specific files or shell variables into these values.
+// Local development uses .env.local. Hosted builds use environment variables
+// configured in the deployment platform; the values are public client config.
 export default defineConfig(() => {
-  let env: Record<string, string | undefined>
-  try { env = parseEnv(readFileSync(new URL('./.env.local', import.meta.url), 'utf8')) }
-  catch { throw new Error('Crie .env.local com VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY.') }
-  const url = env.VITE_SUPABASE_URL?.trim()
-  const key = env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()
+  let localEnv: Record<string, string | undefined> = {}
+  try { localEnv = parseEnv(readFileSync(new URL('./.env.local', import.meta.url), 'utf8')) }
+  catch { /* Hosted builds intentionally do not include .env.local. */ }
+  const url = (localEnv.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL)?.trim()
+  const key = (localEnv.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY)?.trim()
   if (!url || !key || !URL.canParse(url) || new URL(url).protocol !== 'https:')
-    throw new Error('Confira a URL HTTPS e a chave publicável em .env.local.')
+    throw new Error('Configure VITE_SUPABASE_URL com a URL HTTPS do projeto Supabase.')
   if (!key.startsWith('sb_publishable_'))
-    throw new Error('Use a chave sb_publishable_ do seu projeto em .env.local; não use uma chave secreta.')
+    throw new Error('Configure VITE_SUPABASE_PUBLISHABLE_KEY com uma chave sb_publishable_; nunca use uma chave secreta.')
   return {
     plugins: [react()],
     envPrefix: [],

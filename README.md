@@ -7,11 +7,11 @@ src/lib/supabase.ts. Sessões compartilhadas pelas telas usam AuthProvider/useAu
 
 ## Aplicação ao banco existente
 
-O arquivo .env.local da raiz é a única fonte da URL/chave da aplicação.
-O Vite lê esse arquivo diretamente e não aceita substituição por .env,
-.env.production, variáveis de terminal ou outra configuração de conexão.
-Após alterar .env.local, reinicie o servidor; ao publicar, gere um novo build
-no ambiente que possui esse arquivo. Node.js 20.19+ ou 22.12+ é necessário.
+Em desenvolvimento local, `.env.local` é a fonte da URL/chave da aplicação.
+Em builds hospedados, configure `VITE_SUPABASE_URL` e
+`VITE_SUPABASE_PUBLISHABLE_KEY` no painel da plataforma. O arquivo local tem
+precedência quando existe e nunca deve ser enviado ao Git. Após alterá-lo,
+reinicie o servidor. Node.js 20.19+ ou 22.12+ é necessário.
 
 A pasta supabase NÃO é um banco nem estabelece conexões. Ela contém:
 
@@ -36,9 +36,9 @@ com credenciais fixas. A aplicação mantém as tabelas da integração atual.
 6. Depois da ativação manual no painel, o QR aparece como **Ingresso ativo** e o botão do WhatsApp permanece disponível para ajuda.
 7. Depois da baixa, o estado muda para **Convite já utilizado**.
 
-Em Authentication, configure confirmação de e-mail, senha mínima de 12 caracteres,
-Site URL e Redirect URLs (incluindo /meu-ingresso no domínio local e publicado).
-Para envio de e-mails a convidados em produção, configure SMTP no Supabase.
+Em Authentication > Providers > Email, desative **Confirm email** e configure a
+senha mínima em 6 caracteres. Assim o cadastro já cria uma sessão e abre o ingresso.
+Configure também Site URL e Redirect URLs do domínio local e publicado.
 Os limites de requisições de Auth são definidos no painel do Supabase.
 CAPTCHA e MFA não foram habilitados automaticamente; exigem configuração própria.
 Referência: https://supabase.com/docs/guides/auth/password-security
@@ -57,13 +57,22 @@ on conflict(user_id) do update set role='admin',active=true;
 
 Use role='gate' para funcionários que só podem dar baixa. Contas criadas no
 painel sem nome/telefone funcionam como equipe, mas não recebem convite.
-Convidados devem se cadastrar pelo site, confirmar o e-mail e acessar Meu ingresso.
+
+Em um projeto hospedado já existente, aplique as migrations em ordem no SQL
+Editor. Se o cadastro autenticar mas a tela informar que não conseguiu preparar
+o convite, execute `supabase/migrations/202609130003_restore_invitation_rpc.sql`.
+Para reparar a conta administrativa deste projeto e remover os demais acessos
+de equipe, execute depois `supabase/ADMIN_ACCESS_REPAIR.sql`. O segundo script
+não armazena nem altera a senha.
+
+Convidados se cadastram pelo site e acessam Meu ingresso imediatamente.
 Cadastros antigos válidos no Auth recebem convite ao acessar a conta.
 Contas do protótipo no localStorage não foram importadas; precisam de novo cadastro.
 
 ## Fluxo e segurança
 
-- Auth valida senha/sessão; PostgreSQL verifica os campos do cadastro e o usuário autenticado.
+- Auth cria a conta e a sessão sem envio de confirmação por e-mail.
+- PostgreSQL valida os campos depois da autenticação, antes de criar perfil ou convite.
 - ensure_my_invitation cria um único convite pendente por usuário/evento ativo.
 - Os novos códigos têm 122 bits aleatórios; os códigos antigos continuam válidos.
 - QR é gerado e lido localmente com qrcode/jsqr. Nenhuma foto/código é enviado ao goQR.
@@ -84,8 +93,8 @@ não eram utilizadas pela interface foram removidas do repositório.
 ## Como testar
 
 1. Aplique a migração, configure Auth e execute npm run dev.
-2. Em um navegador, cadastre um convidado com e-mail acessível, confirme o e-mail
-   e entre. Confira perfil e convite pending no Table Editor. Ainda não deve aparecer QR.
+2. Em um navegador, cadastre um convidado e confira o acesso imediato. Confira perfil
+   e convite pending no Table Editor. Ainda não deve aparecer QR.
 3. Em outro navegador/perfil (sessões separadas), entre como admin em /admin/login.
    Ative o convite. Em até 10 segundos o convidado deve ver o QR.
 4. Leia uma imagem do QR no painel, confira o nome e dê baixa. O banco deve registrar
