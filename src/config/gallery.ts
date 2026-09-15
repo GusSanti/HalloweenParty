@@ -9,14 +9,6 @@ export interface GalleryImage {
 
 export const localGallery: GalleryImage[] = [
   {
-    id: 'cartaz-2026',
-    src: '/images/event/halloween-party-2026.png',
-    alt: 'Cartaz preto e branco do Halloween Party com boca de vampiro, data e local do evento',
-    caption: 'Cartaz oficial',
-    year: 2026,
-    aspectRatio: 'portrait',
-  },
-  {
     id: 'vale-verde-area-externa',
     src: '/images/event/vale-verde-area-externa.jpg',
     alt: 'Área externa do Vale Verde com varanda coberta, jardim e estrutura do espaço',
