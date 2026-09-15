@@ -44,8 +44,18 @@ export function HomePage() {
         <p>O evento será no Vale Verde, espaço localizado no Campo do Alencar, em Abaeté.</p>
         <dl><div><dt>Local</dt><dd>{eventConfig.location}</dd></div><div><dt>Referência</dt><dd>{eventConfig.venueArea} · {eventConfig.city}</dd></div></dl>
       </div>
-      <div className="map-placeholder" aria-label="Espaço reservado para o mapa do Vale Verde">
-        <div><span>MAPA DA LOCALIZAÇÃO</span><strong>EM BREVE</strong><p>{eventConfig.location}<br />{eventConfig.venueArea} · {eventConfig.city}</p></div>
+      <div className="venue-map">
+        <iframe
+          src={eventConfig.mapEmbedUrl}
+          title={`Mapa da localização: ${eventConfig.location}`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
+        <div className="venue-map-caption">
+          <p><strong>{eventConfig.location}</strong><span>{eventConfig.venueArea} · {eventConfig.city}</span></p>
+          <a href={eventConfig.mapUrl} target="_blank" rel="noreferrer">Abrir no Google Maps <span aria-hidden="true">↗</span></a>
+        </div>
       </div>
     </section>
 

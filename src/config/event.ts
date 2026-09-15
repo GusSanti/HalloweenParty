@@ -6,7 +6,8 @@ export const eventConfig = {
   city: 'Abaeté',
   instagramUrl: 'https://instagram.com/halloween_abaete/',
   whatsappUrl: 'https://wa.me/553798702778',
-  mapUrl: '',
+  mapUrl: 'https://maps.app.goo.gl/qMatzs4zD7xbffzQA',
+  mapEmbedUrl: 'https://www.google.com/maps?q=-19.17241,-45.4483373&z=17&output=embed',
   time: '20h30',
 } as const
 
