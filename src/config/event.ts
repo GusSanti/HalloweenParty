@@ -1,7 +1,8 @@
 export const eventConfig = {
   name: 'HALLOWEEN',
   date: '2026-10-24',
-  location: 'Campo do Alencar',
+  location: 'Vale Verde',
+  venueArea: 'Campo do Alencar',
   city: 'Abaeté',
   instagramUrl: 'https://instagram.com/halloween_abaete/',
   whatsappUrl: 'https://wa.me/553798702778',

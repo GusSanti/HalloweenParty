@@ -9,8 +9,10 @@ export function PublicLayout() {
   const navigate = useNavigate()
   const isHome = location.pathname === '/'
   const isTicketPortal = location.pathname === '/meu-ingresso'
-  const { user } = useAuth()
+  const { user, staffRole } = useAuth()
   const hasAccount = Boolean(user)
+  const accountTarget = staffRole ? '/admin' : hasAccount ? '/meu-ingresso' : '/ingresso'
+  const accountLabel = staffRole ? 'Painel admin' : hasAccount ? 'Meu ingresso' : 'Comprar ingresso'
   function jumpTo(id: string) {
     setMenuOpen(false)
     const scroll = () => document.getElementById(id)?.scrollIntoView({ behavior: 'auto', block: 'start' })
@@ -25,8 +27,9 @@ export function PublicLayout() {
         <nav className={menuOpen ? 'open' : ''} aria-label="Navegação principal">
           <button type="button" onClick={() => jumpTo('evento')}>O evento</button>
           <button type="button" onClick={() => jumpTo('open-bar')}>Open bar</button>
+          <button type="button" onClick={() => jumpTo('local')}>Local</button>
         </nav>
-        <Link className="header-cta" to={hasAccount ? '/meu-ingresso' : '/ingresso'}>{hasAccount ? 'Meu ingresso' : 'Comprar ingresso'}</Link>
+        <Link className="header-cta" to={accountTarget}>{accountLabel}</Link>
         <button className="menu-toggle" type="button" aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
           {menuOpen ? 'Fechar' : 'Menu'}
         </button>

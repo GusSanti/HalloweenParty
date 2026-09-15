@@ -88,7 +88,9 @@ export async function signInStaff(email: string, password: string) {
   if (!await getStaffSession()) { await signOut(); throw new Error('Usuário sem acesso à equipe.') }
 }
 export async function signOut() {
-  const { error } = await client().auth.signOut()
+  const connection = client()
+  const { error } = await connection.auth.signOut({ scope: 'local' })
+  if (error && !(await connection.auth.getSession()).data.session) return
   if (error) throw new Error('Não foi possível sair. Tente novamente.')
 }
 export const signOutStaff = signOut
