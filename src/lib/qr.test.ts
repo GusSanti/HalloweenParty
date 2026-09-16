@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import QRCode from 'qrcode'
-import { normalizeInvitationQr, readInvitationCodeFromPixels } from './qr'
+import { invitationQrPayload, normalizeInvitationQr, readInvitationCodeFromPixels } from './qr'
 
 const code = 'H26-0123456789ABCDEF0123456789ABCDEF'
 
@@ -28,6 +28,7 @@ describe('QR Code de convites', () => {
   it('normaliza o formato atual e o formato legado', () => {
     expect(normalizeInvitationQr(` H26:${code.toLowerCase()} `)).toBe(code)
     expect(normalizeInvitationQr('H26-ABCD-EFGH')).toBe('H26-ABCD-EFGH')
+    expect(invitationQrPayload(code)).toBe(`H26:${code}`)
   })
 
   it('rejeita conteúdo que não seja um convite', () => {

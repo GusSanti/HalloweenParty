@@ -75,7 +75,7 @@ Contas do protótipo no localStorage não foram importadas; precisam de novo cad
 - PostgreSQL valida os campos depois da autenticação, antes de criar perfil ou convite.
 - ensure_my_invitation cria um único convite pendente por usuário/evento ativo.
 - Os novos códigos têm 122 bits aleatórios; os códigos antigos continuam válidos.
-- QR é gerado e lido localmente com qrcode/jsqr. Nenhuma foto/código é enviado ao goQR.
+- QR é gerado pela API goQR, com `qrcode` local como contingência. A leitura usa câmera ao vivo ou foto, tenta os leitores do aparelho e recorre à goQR com uma imagem reduzida; todo resultado é validado no formato do evento.
 - Ler QR abre o cadastro; Dar baixa executa a alteração atômica no PostgreSQL.
 - Admin ativa, reativa ou deixa pendente. Portaria só usa convites ativos.
 - RLS limita convidados aos próprios dados; navegador não pode escrever diretamente

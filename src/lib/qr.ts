@@ -1,4 +1,5 @@
 import jsQR from 'jsqr'
+import { prepareImageForGoQr, readQrWithGoQr } from './goqr'
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -20,6 +21,12 @@ type BarcodeDetectorConstructor = new (options: { formats: string[] }) => Barcod
 export function normalizeInvitationQr(value: string) {
   const normalized = value.replace(/^\uFEFF/, '').trim().toUpperCase()
   return INVITATION_CODE.exec(normalized)?.[1] ?? null
+}
+
+export function invitationQrPayload(code: string) {
+  const normalized = normalizeInvitationQr(code)
+  if (!normalized) throw new Error('Código de convite inválido.')
+  return `H26:${normalized}`
 }
 
 function decodePixels(data: Uint8ClampedArray, width: number, height: number) {
@@ -61,14 +68,9 @@ interface ScanRegion {
 function scanRegions(source: QrImageSource) {
   const { width, height } = source
   const regions: ScanRegion[] = [
-    { x: 0, y: 0, width, height, maxDimension: 2400 },
-    { x: width * .1, y: height * .1, width: width * .8, height: height * .8, maxDimension: 2200 },
-    { x: width * .2, y: height * .2, width: width * .6, height: height * .6, maxDimension: 2000 },
-    // Overlapping quadrants recover a small QR Code even when it is off-centre.
-    { x: 0, y: 0, width: width * .65, height: height * .65, maxDimension: 1800 },
-    { x: width * .35, y: 0, width: width * .65, height: height * .65, maxDimension: 1800 },
-    { x: 0, y: height * .35, width: width * .65, height: height * .65, maxDimension: 1800 },
-    { x: width * .35, y: height * .35, width: width * .65, height: height * .65, maxDimension: 1800 },
+    { x: 0, y: 0, width, height, maxDimension: 1800 },
+    { x: width * .1, y: height * .1, width: width * .8, height: height * .8, maxDimension: 1600 },
+    { x: width * .2, y: height * .2, width: width * .6, height: height * .6, maxDimension: 1400 },
   ]
 
   const canvas = document.createElement('canvas')
@@ -96,6 +98,52 @@ function scanRegions(source: QrImageSource) {
     }
   }
   return { code: null, foundQr }
+}
+
+function scanFrame(source: CanvasImageSource, width: number, height: number) {
+  const scale = Math.min(1, 1280 / Math.max(width, height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(width * scale))
+  canvas.height = Math.max(1, Math.round(height * scale))
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('Não foi possível acessar a câmera neste navegador.')
+  ctx.drawImage(source, 0, 0, width, height, 0, 0, canvas.width, canvas.height)
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const rawValue = decodePixels(pixels.data, pixels.width, pixels.height)
+  return {
+    code: rawValue ? normalizeInvitationQr(rawValue) : null,
+    foundQr: Boolean(rawValue),
+  }
+}
+
+function cropLiveFrame(source: CanvasImageSource, width: number, height: number) {
+  const cropWidth = Math.round(width * .74)
+  const cropHeight = Math.round(height * .74)
+  const canvas = document.createElement('canvas')
+  canvas.width = cropWidth
+  canvas.height = cropHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Não foi possível preparar a imagem da câmera.')
+  ctx.drawImage(
+    source,
+    Math.round((width - cropWidth) / 2), Math.round((height - cropHeight) / 2), cropWidth, cropHeight,
+    0, 0, cropWidth, cropHeight,
+  )
+  return canvas
+}
+
+async function readSourceWithGoQr(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  signal?: AbortSignal,
+) {
+  const upload = await prepareImageForGoQr(source, width, height)
+  const rawValue = await readQrWithGoQr(upload, signal)
+  return {
+    code: rawValue ? normalizeInvitationQr(rawValue) : null,
+    foundQr: Boolean(rawValue),
+  }
 }
 
 async function loadImage(file: File): Promise<{ source: QrImageSource; close: () => void }> {
@@ -137,6 +185,16 @@ export async function readQrImage(file: File) {
     const nativeResult = await readWithNativeDetector(source)
     if (nativeResult.code) return nativeResult.code
 
+    try {
+      const remoteResult = await readSourceWithGoQr(source, source.width, source.height)
+      if (remoteResult.code) return remoteResult.code
+      if (remoteResult.foundQr)
+        throw new Error('O QR Code foi lido, mas não pertence a um convite deste evento.')
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('não pertence')) throw error
+      // Network/API failures fall back to the embedded decoder below.
+    }
+
     const fallbackResult = scanRegions(source)
     if (fallbackResult.code) return fallbackResult.code
     if (nativeResult.foundQr || fallbackResult.foundQr)
@@ -145,4 +203,35 @@ export async function readQrImage(file: File) {
   } finally {
     close()
   }
+}
+
+export async function readQrVideoFrame(video: HTMLVideoElement, useRemoteReader = false, signal?: AbortSignal) {
+  const width = video.videoWidth
+  const height = video.videoHeight
+  if (!width || !height || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null
+
+  const nativeResult = await readWithNativeDetector(video)
+  if (nativeResult.code) return nativeResult.code
+  if (nativeResult.foundQr)
+    throw new Error('O QR Code foi lido, mas não pertence a um convite deste evento.')
+
+  const localResult = scanFrame(video, width, height)
+  if (localResult.code) return localResult.code
+  if (localResult.foundQr)
+    throw new Error('O QR Code foi lido, mas não pertence a um convite deste evento.')
+  if (!useRemoteReader) return null
+
+  try {
+    // Only the area shown inside the scanner frame is sent to the remote reader.
+    const croppedFrame = cropLiveFrame(video, width, height)
+    const remoteResult = await readSourceWithGoQr(croppedFrame, croppedFrame.width, croppedFrame.height, signal)
+    if (remoteResult.code) return remoteResult.code
+    if (remoteResult.foundQr)
+      throw new Error('O QR Code foi lido, mas não pertence a um convite deste evento.')
+  } catch (error) {
+    if (signal?.aborted) return null
+    if (error instanceof Error && error.message.includes('não pertence')) throw error
+    // Keep the live scanner running if the optional remote reader is unavailable.
+  }
+  return null
 }
