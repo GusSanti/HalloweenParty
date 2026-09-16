@@ -130,4 +130,3 @@ que o acesso anônimo às tabelas privadas é recusado. Não cria usuários, nã
 altera permissões e não aplica SQL. Essa checagem não substitui testes com duas
 contas autenticadas, pois a chave pública não pode inspecionar todas as regras
 internas do banco.
-new log
